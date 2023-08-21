@@ -32,6 +32,7 @@ enum class ext
     TGA,
     WAL,
     MIP,
+    MAT,
     /**
      * Anything loadable by stb_image.h
      */
@@ -103,13 +104,18 @@ std::optional<texture> load_mip(
 std::optional<texture> load_stb(
     const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
+// mat loader
+std::optional<texture> load_mat(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
+
 // list of supported extensions and their loaders
 constexpr struct
 {
     const char *suffix;
     ext id;
     decltype(load_wal) *loader;
-} extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb}, {".tga", ext::TGA, load_stb},
+} extension_list[] = {{".mat", ext::MAT, load_mat},
+    {".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb}, {".tga", ext::TGA, load_stb},
     {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
@@ -119,13 +125,18 @@ std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(co
 enum class meta_ext
 {
     WAL,
-    WAL_JSON
+    WAL_JSON,
+    MAT_META
 };
 
 // Load wal
 std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game);
 
 std::optional<texture_meta> load_wal_json_meta(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game);
+
+// Load mat
+std::optional<texture_meta> load_mat_meta(
     const std::string_view &name, const fs::data &file, const gamedef_t *game);
 
 // list of supported meta extensions and their loaders
@@ -135,6 +146,7 @@ constexpr struct
     meta_ext id;
     decltype(load_wal_meta) *loader;
 } meta_extension_list[] = {
+    {".mat", meta_ext::MAT_META, load_mat_meta},
     {".wal_json", meta_ext::WAL_JSON, load_wal_json_meta}, {".wal", meta_ext::WAL, load_wal_meta}};
 
 // Attempt to load a texture meta from the specified name.

@@ -455,6 +455,8 @@ qbsp_settings::qbsp_settings()
       qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
       bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
       bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
+      moonshot{this, "moonshot", false, &game_target_group, "target Moonshot with the default Quake II BSP format"},
+      moonshotqbism{this, "moonshotqbism", false, &game_target_group, "target Moonshot with Qbism's extended Quake II BSP format"},
       nosubdivide{this, "nosubdivide", [&](source src) { subdivide.set_value(0, src); }, &common_format_group,
           "disable subdivision"},
       software{this, "software", true, &common_format_group,
@@ -675,6 +677,14 @@ void qbsp_settings::load_entity_def(const std::string &pathname)
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
     // set target BSP type
+    if (moonshot.value()) {
+        set_target_version(&bspver_moonshot);
+    }
+
+    if (moonshotqbism.value()) {
+        set_target_version(&bspver_moonshot_qbism);
+    }
+
     if (hlbsp.value()) {
         set_target_version(&bspver_hl);
     }
@@ -736,6 +746,18 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
         if (!software.is_changed()) {
             software.set_value(false, settings::source::GAME_TARGET);
+        }
+    }
+
+    // side effects from Moonshot
+    if (qbsp_options.target_game->subid == SUBGAME_MOONSHOT) {
+        // no software renderer
+        if (!software.is_changed()) {
+            software.set_value(false, settings::source::GAME_TARGET);
+        }
+        // internally use delaunay triangulation, no need to split faces
+        if (!tjunc.is_changed()) {
+            tjunc.set_value(tjunclevel_t::ROTATE, settings::source::GAME_TARGET);
         }
     }
 
@@ -1663,7 +1685,11 @@ static int MakeSkipTexinfo()
 {
     maptexinfo_t mt{};
 
-    mt.miptex = FindMiptex("skip", true);
+    if (qbsp_options.target_game->subid == SUBGAME_MOONSHOT) {
+        mt.miptex = FindMiptex("tools/skip", true);
+    } else {
+        mt.miptex = FindMiptex("skip", true);
+    }
     mt.flags.is_nodraw = true;
 
     return FindTexinfo(mt);

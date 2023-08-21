@@ -27,12 +27,21 @@
 // parser_source_location
 
 parser_source_location::parser_source_location() = default;
+parser_source_location::parser_source_location(const std::string_view &source)
+    : source_name(std::make_unique<std::string>(source))
+{
+}
 parser_source_location::parser_source_location(const std::string &source)
     : source_name(std::make_unique<std::string>(source))
 {
 }
 parser_source_location::parser_source_location(const char *source)
     : source_name(std::make_unique<std::string>(source))
+{
+}
+parser_source_location::parser_source_location(const std::string_view &source, size_t line)
+    : source_name(std::make_unique<std::string>(source)),
+      line_number(line)
 {
 }
 parser_source_location::parser_source_location(const std::string &source, size_t line)

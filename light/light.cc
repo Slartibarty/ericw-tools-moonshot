@@ -1518,31 +1518,63 @@ int light_main(int argc, const char **argv)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
-    // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
+    // tweak some settings to match expectations of Quake 2 engines
     if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
-        if (!light_options.rangescale.is_changed()) {
-            light_options.rangescale.set_value(1.0, settings::source::GAME_TARGET);
+        if (bspdata.loadversion->game->subid != SUBGAME_MOONSHOT) {
+            if (!light_options.bouncecolorscale.is_changed()) {
+                light_options.bouncecolorscale.set_value(0.5, settings::source::GAME_TARGET);
+            }
+            if (!light_options.surflightskyscale.is_changed()) {
+                light_options.surflightskyscale.set_value(0.65f, settings::source::GAME_TARGET);
+            }
+            if (!light_options.surflightscale.is_changed()) {
+                light_options.surflightscale.set_value(0.65f, settings::source::GAME_TARGET);
+            }
+            if (!light_options.bouncescale.is_changed()) {
+                light_options.bouncescale.set_value(0.85f, settings::source::GAME_TARGET);
+            }
+            if (!light_options.bouncestyled.is_changed()) {
+                light_options.bouncestyled.set_value(true, settings::source::GAME_TARGET);
+            }
+            // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
+            if (!light_options.rangescale.is_changed()) {
+                light_options.rangescale.set_value(1.0, settings::source::GAME_TARGET);
+            }
+        } else {
+            // no vanilla
+            if (!light_options.novanilla.is_changed()) {
+                light_options.novanilla.set_value(true, settings::source::GAME_TARGET);
+            }
+            // always full bounce impact from textures
+            if (!light_options.bouncecolorscale.is_changed()) {
+                light_options.bouncecolorscale.set_value(1.0, settings::source::GAME_TARGET);
+            }
+            // always decouple lightmaps
+            if (!light_options.world_units_per_luxel.is_changed()) {
+                light_options.world_units_per_luxel.set_value(16.0, settings::source::GAME_TARGET);
+            }
+            // always write FACENORMALS lump
+            if (!light_options.write_normals.is_changed()) {
+                light_options.write_normals.set_value(true, settings::source::GAME_TARGET);
+            }
+            // always 50 degree phong angle
+            if (!light_options.phongangle.is_changed()) {
+                light_options.phongangle.set_value(50.0, settings::source::GAME_TARGET);
+            }
+            // always move the lightmap into gamma 2.2 space
+            // usually, the gamma is 1.0, which means the lightmap is in linear space
+            // but accounting for this in shaders results in massive color precision loss,
+            // so doing it here is extremely beneficial.
+            if (!light_options.lightmapgamma.is_changed()) {
+                light_options.lightmapgamma.set_value(2.2, settings::source::GAME_TARGET);
+            }
         }
-        if (!light_options.bouncecolorscale.is_changed()) {
-            light_options.bouncecolorscale.set_value(0.5, settings::source::GAME_TARGET);
-        }
-        if (!light_options.surflightscale.is_changed()) {
-            light_options.surflightscale.set_value(0.65f, settings::source::GAME_TARGET);
-        }
-        if (!light_options.surflightskyscale.is_changed()) {
-            light_options.surflightskyscale.set_value(0.65f, settings::source::GAME_TARGET);
-        }
-        if (!light_options.bouncescale.is_changed()) {
-            light_options.bouncescale.set_value(0.85f, settings::source::GAME_TARGET);
-        }
+
         if (!light_options.bounce.is_changed()) {
             light_options.bounce.set_value(true, settings::source::GAME_TARGET);
         }
         if (!light_options.surflight_radiosity.is_changed()) {
             light_options.surflight_radiosity.set_value(SURFLIGHT_RAD, settings::source::GAME_TARGET);
-        }
-        if (!light_options.bouncestyled.is_changed()) {
-            light_options.bouncestyled.set_value(true, settings::source::GAME_TARGET);
         }
     }
 

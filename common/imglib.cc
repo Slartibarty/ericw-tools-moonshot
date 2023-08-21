@@ -82,7 +82,12 @@ void init_palette(const gamedef_t *game)
 
     // Load game-specific palette palette
     if (game->id == GAME_QUAKE_II) {
-        constexpr const char *colormap = "pics/colormap.pcx";
+        const char *colormap;
+        if (game->subid == SUBGAME_MOONSHOT) {
+            colormap = "textures/q2_colormap.pcx";
+        } else {
+            colormap = "pics/colormap.pcx";
+        }
 
         if (LoadPCXPalette(colormap, palette)) {
             return;
@@ -105,6 +110,222 @@ static void convert_paletted_to_32_bit(
         // Last palette index is transparent color
         output[i] = qvec4b(pal[pixels[i]], pixels[i] == 255 ? 0 : 255);
     }
+}
+
+/*
+============================================================================
+MAT
+============================================================================
+*/
+
+struct mat_guts
+{
+    texture_meta meta;
+    uint8_t *basetexture = nullptr;
+};
+
+static qvec3b mat_parse_color_vector(parser_t &parser)
+{
+    qvec3b vec{};
+
+    // This is terrible and doesn't account for unfinished arrays
+    for (int i = 0; i < 3; ++i) {
+        if (!parser.parse_token()) {
+            return vec;
+        }
+
+        vec[i] = std::atoi(parser.token.c_str());
+    }
+
+    return vec;
+}
+
+static bool mat_load_basetexture(const std::string &name, mat_guts &guts)
+{
+    fs::path p = name;
+
+    if (auto pos = fs::where(p, true)) {
+        auto file = fs::load(pos);
+
+        int x, y, channels_in_file;
+        stbi_uc *rgba_data = stbi_load_from_memory(file->data(), file->size(), &x, &y, &channels_in_file, 4);
+
+        if (!rgba_data) {
+            logging::funcprint("stbi error: {}\n", stbi_failure_reason());
+            return false;
+        }
+
+        guts.meta.width = x;
+        guts.meta.height = y;
+        guts.basetexture = rgba_data;
+        return true;
+    }
+
+    return false;
+}
+
+std::optional<mat_guts> load_mat_internal(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game)
+{
+    parser_t parser(file, {name});
+
+    if (!parser.parse_token() || parser.token[0] != '{') {
+        // Malformed
+        return std::nullopt;
+    }
+
+    mat_guts guts;
+    guts.meta.name = name;
+
+    while (parser.parse_token() && parser.token[0] != '}') {
+        if (parser.token == "$basetexture") {
+            if (parser.parse_token()) {
+                mat_load_basetexture(parser.token, guts);
+            }
+            continue;
+        }
+        if (parser.token == "$nextframe") {
+            if (parser.parse_token()) {
+                guts.meta.animation = parser.token;
+            }
+            continue;
+        }
+        if (parser.token == "%compileclip") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.contents.native |= Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP;
+                guts.meta.flags.native |= Q2_SURF_NODRAW;
+            }
+            continue;
+        }
+        if (parser.token == "%compileplayerclip") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.contents.native |= Q2_CONTENTS_PLAYERCLIP;
+                guts.meta.flags.native |= Q2_SURF_NODRAW;
+            }
+            continue;
+        }
+        if (parser.token == "%compilenpcclip") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.contents.native |= Q2_CONTENTS_MONSTERCLIP;
+                guts.meta.flags.native |= Q2_SURF_NODRAW;
+            }
+            continue;
+        }
+        if (parser.token == "%compilehint") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.flags.native |= Q2_SURF_NODRAW | Q2_SURF_HINT;
+            }
+            continue;
+        }
+        if (parser.token == "%compileskip") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.contents.native |= Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP;
+                guts.meta.flags.native |= Q2_SURF_NODRAW;
+            }
+            continue;
+        }
+        if (parser.token == "%compilesky") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.flags.native |= Q2_SURF_SKY;
+            }
+            continue;
+        }
+        if (parser.token == "%compileorigin") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.contents.native |= Q2_CONTENTS_ORIGIN;
+                guts.meta.flags.native |= Q2_SURF_NODRAW;
+            }
+            continue;
+        }
+        if (parser.token == "%compilenodraw" || parser.token == "%compiletrigger") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.flags.native |= Q2_SURF_NODRAW;
+            }
+            continue;
+        }
+        if (parser.token == "%compilewater") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.contents.native |= Q2_CONTENTS_WATER;
+                guts.meta.flags.native |= Q2_SURF_WARP;
+            }
+            continue;
+        }
+        // RAD variables
+        if (parser.token == "%rad_color") {
+            if (parser.parse_token()) {
+                guts.meta.color_override = mat_parse_color_vector(parser);
+            }
+            continue;
+        }
+        if (parser.token == "%rad_intensity") {
+            if (parser.parse_token()) {
+                guts.meta.flags.native |= Q2_SURF_LIGHT;
+                guts.meta.value = std::atoi(parser.token.c_str());
+            }
+            continue;
+        }
+    }
+
+    return guts;
+}
+
+std::optional<texture_meta> load_mat_meta(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game)
+{
+    std::optional<mat_guts> guts = load_mat_internal(name, file, game);
+    if (!guts) {
+        return std::nullopt;
+    }
+
+    if (guts->basetexture) {
+        stbi_image_free(guts->basetexture);
+    }
+
+    return guts->meta;
+}
+
+std::optional<texture> load_mat(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+{
+    std::optional<mat_guts> guts = load_mat_internal(name, file, game);
+    if (!guts) {
+        return std::nullopt;
+    }
+
+    texture tex;
+    tex.meta = guts->meta;
+
+    if (!guts->basetexture) {
+        // Early out
+        return tex;
+    }
+
+    tex.meta.extension = ext::MAT;
+
+    tex.width = guts->meta.width;
+    tex.height = guts->meta.height;
+
+    if (!meta_only) {
+        int num_pixels = tex.width * tex.height;
+        if (num_pixels < 0) {
+            // Should never happen?
+            stbi_image_free(guts->basetexture);
+            return std::nullopt;
+        }
+
+        const uint8_t *rgba = guts->basetexture;
+
+        tex.pixels.resize(num_pixels);
+
+        qvec4b *out = tex.pixels.data();
+        for (int i = 0; i < num_pixels; ++i) {
+            out[i] = {rgba[4 * i], rgba[4 * i + 1], rgba[4 * i + 2], rgba[4 * i + 3]};
+        }
+    }
+
+    stbi_image_free(guts->basetexture);
+
+    return tex;
 }
 
 /*
@@ -332,7 +553,11 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     fs::path prefix{};
 
     if (!no_prefix && game->id == GAME_QUAKE_II) {
-        prefix = "textures";
+        if (game->subid == SUBGAME_MOONSHOT) {
+            prefix = "materials";
+        } else {
+            prefix = "textures";
+        }
     }
 
     for (auto &ext : img::extension_list) {
@@ -491,7 +716,11 @@ std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_
     fs::path prefix;
 
     if (game->id == GAME_QUAKE_II) {
-        prefix = "textures";
+        if (game->subid == SUBGAME_MOONSHOT) {
+            prefix = "materials";
+        } else {
+            prefix = "textures";
+        }
     }
 
     for (auto &ext : img::meta_extension_list) {

@@ -970,12 +970,13 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
     }
 };
 
-struct gamedef_q2_t : public gamedef_t
+template<gameid_t ID>
+struct gamedef_q2_like_t : public gamedef_t
 {
-    gamedef_q2_t()
-        : gamedef_t("BASEQ2")
+    explicit gamedef_q2_like_t(const char *base_dir = "BASEQ2")
+        : gamedef_t(base_dir)
     {
-        this->id = GAME_QUAKE_II;
+        this->id = ID;
         has_rgb_lightmap = true;
         allow_contented_bmodels = true;
         max_entity_key = 256;
@@ -1654,11 +1655,21 @@ public:
     }
 };
 
+struct gamedef_moonshot_t : public gamedef_q2_like_t<GAME_QUAKE_II>
+{
+    gamedef_moonshot_t()
+        : gamedef_q2_like_t("VALVE")
+    {
+        subid = SUBGAME_MOONSHOT;
+    }
+};
+
 // Game definitions, used for the bsp versions below
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
 static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
-static const gamedef_q2_t gamedef_q2;
+static const gamedef_q2_like_t<GAME_QUAKE_II> gamedef_q2;
+static const gamedef_moonshot_t gamedef_moonshot;
 
 const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}};
 const bspversion_t bspver_q1{BSPVERSION, std::nullopt, "bsp29", "Quake BSP",
@@ -1823,6 +1834,52 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
         {"areaportals", sizeof(dareaportal_t)},
     },
     &gamedef_q2};
+const bspversion_t bspver_moonshot{Q2_BSPIDENT, Q2_BSPVERSION, "moonshot", "Moonshot Quake II BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_t)},
+        {"texinfos", sizeof(q2_texinfo_t)},
+        {"faces", sizeof(q2_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_t)},
+        {"leaffaces", sizeof(uint16_t)},
+        {"leafbrushes", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(q2_dbrushside_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+    },
+    &gamedef_moonshot, &bspver_moonshot_qbism};
+const bspversion_t bspver_moonshot_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "moonshotqbism", "Moonshot Qbism BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_qbism_t)},
+        {"texinfos", sizeof(q2_texinfo_t)},
+        {"faces", sizeof(q2_dface_qbism_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_qbism_t)},
+        {"leaffaces", sizeof(uint32_t)},
+        {"leafbrushes", sizeof(uint32_t)},
+        {"edges", sizeof(bsp2_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(q2_dbrushside_qbism_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+    },
+    &gamedef_moonshot};
 
 static auto as_tuple(const surfflags_t &flags)
 {
@@ -2203,9 +2260,9 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         try {
             if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
                 bspdata->bsp = ConvertGenericToQ1BSP<bsp29_t>(mbsp, to_version);
-            } else if (to_version == &bspver_q2) {
+            } else if (to_version == &bspver_q2 || to_version == &bspver_moonshot) {
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version);
-            } else if (to_version == &bspver_qbism) {
+            } else if (to_version == &bspver_qbism || to_version == &bspver_moonshot_qbism) {
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
                 bspdata->bsp = ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version);
@@ -2518,15 +2575,22 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
             }
         }
 
+        // SLART: HACK HACK HACK JUST FORCE MOONSHOT I AM STUPID!
+        if (bspdata->version == &bspver_q2) {
+            bspdata->version = &bspver_moonshot;
+        } else if (bspdata->version == &bspver_qbism) {
+            bspdata->version = &bspver_moonshot_qbism;
+        }
+
         logging::print("BSP is version {}\n", *bspdata->version);
     }
 
     lump_reader reader{stream, bspdata->version, lumps};
 
     /* copy the data */
-    if (bspdata->version == &bspver_q2) {
+    if (bspdata->version == &bspver_q2 || bspdata->version == &bspver_moonshot) {
         ReadQ2BSP(reader, bspdata->bsp.emplace<q2bsp_t>());
-    } else if (bspdata->version == &bspver_qbism) {
+    } else if (bspdata->version == &bspver_qbism || bspdata->version == &bspver_moonshot_qbism) {
         ReadQ2BSP(reader, bspdata->bsp.emplace<q2bsp_qbism_t>());
     } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
         ReadQ1BSP(reader, bspdata->bsp.emplace<bsp29_t>());

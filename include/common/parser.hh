@@ -59,8 +59,10 @@ struct parser_source_location
     const parser_source_location *derivative = nullptr;
 
     parser_source_location();
+    parser_source_location(const std::string_view &source);
     parser_source_location(const std::string &source);
     parser_source_location(const char *source);
+    parser_source_location(const std::string_view &source, size_t line);
     parser_source_location(const std::string &source, size_t line);
     parser_source_location(const char *source, size_t line);
 

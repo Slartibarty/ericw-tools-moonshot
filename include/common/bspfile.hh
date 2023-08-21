@@ -220,6 +220,15 @@ enum gameid_t
     GAME_TOTAL
 };
 
+// sub-games
+enum subgameid_t
+{
+    SUBGAME_UNKNOWN,
+    SUBGAME_MOONSHOT,
+
+    SUBGAME_TOTAL
+};
+
 struct content_stats_base_t
 {
     virtual ~content_stats_base_t() = default;
@@ -231,6 +240,8 @@ struct gamedef_t
 {
     // ID, used for quick comparisons
     gameid_t id = GAME_UNKNOWN;
+    // secondary game ID
+    subgameid_t subid = SUBGAME_UNKNOWN;
 
     // whether the game uses an RGB lightmap or not
     bool has_rgb_lightmap = false;
@@ -439,7 +450,7 @@ struct bspdata_t
 
 /* table of supported versions */
 constexpr const bspversion_t *const bspversions[] = {&bspver_generic, &bspver_q1, &bspver_h2, &bspver_h2bsp2,
-    &bspver_h2bsp2rmq, &bspver_bsp2, &bspver_bsp2rmq, &bspver_hl, &bspver_q2, &bspver_qbism};
+    &bspver_h2bsp2rmq, &bspver_bsp2, &bspver_bsp2rmq, &bspver_hl, &bspver_q2, &bspver_qbism, &bspver_moonshot, &bspver_moonshot_qbism};
 
 void LoadBSPFile(fs::path &filename, bspdata_t *bspdata); // returns the filename as contained inside a bsp
 void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata);

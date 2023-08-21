@@ -346,7 +346,7 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
     if (!entity->surflight_minlight_scale.is_changed()) {
         if (cfg.surflight_minlight_scale.is_changed()) {
             entity->surflight_minlight_scale.set_value(cfg.surflight_minlight_scale.value(), settings::source::DEFAULT);
-        } else if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        } else if (bsp->loadversion->game->id == GAME_QUAKE_II && bsp->loadversion->game->subid != SUBGAME_MOONSHOT) {
             // this default value mimicks the fullbright-ish nature of emissive surfaces
             // in Q2.
             entity->surflight_minlight_scale.set_value(64.0f, settings::source::DEFAULT);

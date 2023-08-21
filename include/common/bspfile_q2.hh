@@ -385,3 +385,5 @@ struct q2bsp_qbism_t : q2bsp_tag_t
 
 extern const bspversion_t bspver_q2;
 extern const bspversion_t bspver_qbism;
+extern const bspversion_t bspver_moonshot;
+extern const bspversion_t bspver_moonshot_qbism;
