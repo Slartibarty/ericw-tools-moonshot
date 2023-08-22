@@ -1662,6 +1662,20 @@ struct gamedef_moonshot_t : public gamedef_q2_like_t<GAME_QUAKE_II>
     {
         subid = SUBGAME_MOONSHOT;
     }
+
+    void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
+    {
+        img::clear();
+        fs::clear();
+
+        // add secondary paths
+        for (auto &path : options.paths.values()) {
+            addArchive(path);
+        }
+
+        // load palette
+        img::init_palette(this);
+    }
 };
 
 // Game definitions, used for the bsp versions below
