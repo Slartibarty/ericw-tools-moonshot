@@ -164,6 +164,22 @@ static bool mat_load_basetexture(const std::string &name, mat_guts &guts)
     return false;
 }
 
+// Assumes there is not a slash at the end of the filename
+static bool material_name_implies_alphatest(const std::string_view &name)
+{
+    size_t cursor = name.find_last_of('/');
+    if (cursor == std::string_view::npos) {
+        return false;
+    }
+    ++cursor;
+
+    if (cursor >= name.size()) {
+        return false;
+    }
+
+    return name[cursor] == '{';
+}
+
 std::optional<mat_guts> load_mat_internal(
     const std::string_view &name, const fs::data &file, const gamedef_t *game)
 {
@@ -177,6 +193,12 @@ std::optional<mat_guts> load_mat_internal(
     mat_guts guts;
     guts.meta.name = name;
 
+    // Little hack, if our material name starts with {,
+    // assume we want alphatest transparency
+    if (material_name_implies_alphatest(name)) {
+        guts.meta.flags.native |= Q2_SURF_ALPHATEST;
+    }
+
     while (parser.parse_token() && parser.token[0] != '}') {
         if (parser.token == "$basetexture") {
             if (parser.parse_token()) {
@@ -187,6 +209,12 @@ std::optional<mat_guts> load_mat_internal(
         if (parser.token == "$nextframe") {
             if (parser.parse_token()) {
                 guts.meta.animation = parser.token;
+            }
+            continue;
+        }
+        if (parser.token == "$alphatest") {
+            if (parser.parse_token() && std::atoi(parser.token.c_str())) {
+                guts.meta.flags.native |= Q2_SURF_ALPHATEST;
             }
             continue;
         }
