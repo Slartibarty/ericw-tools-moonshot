@@ -121,6 +121,7 @@ private:
     QLineEdit *qbsp_options = nullptr;
     QLineEdit *vis_options = nullptr;
     QLineEdit *light_options = nullptr;
+    QLineEdit *output_dir = nullptr;
     QVBoxLayout *lightstyles = nullptr;
 
     QMenu *viewMenu = nullptr;

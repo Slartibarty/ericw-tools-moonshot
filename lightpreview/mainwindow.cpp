@@ -150,6 +150,7 @@ void MainWindow::createPropertiesSidebar()
     qbsp_options = new QLineEdit();
     vis_options = new QLineEdit();
     light_options = new QLineEdit();
+    output_dir = new QLineEdit();
     auto *reload_button = new QPushButton(tr("Reload"));
 
     auto *lightmapped = new QRadioButton(tr("Lightmapped"));
@@ -192,6 +193,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
+    formLayout->addRow(tr("output"), output_dir);
     formLayout->addRow(reload_button);
     formLayout->addRow(rendermode_group);
     formLayout->addRow(drawportals);
@@ -234,6 +236,7 @@ void MainWindow::createPropertiesSidebar()
     vis_checkbox->setChecked(s.value("vis_enabled").toBool());
     vis_options->setText(s.value("vis_options").toString());
     light_options->setText(s.value("light_options").toString());
+    output_dir->setText(s.value("output_dir").toString());
     nearest->setChecked(s.value("nearest").toBool());
     overbright->setChecked(s.value("overbright", QVariant(true)).toBool());
     if (nearest->isChecked()) {
@@ -509,9 +512,6 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
                                             ETLogWidget::logTabNames[(int32_t)m_activeLogTab]));
     };
 
-    auto bsp_path = name;
-    bsp_path.replace_extension(".bsp");
-
     std::vector<std::string> args{
         "", // the exe path, which we're ignoring in this case
     };
@@ -522,6 +522,27 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
         args.push_back(extra);
     }
     args.push_back(name.string());
+
+    // output filename
+    std::filesystem::path bsp_path = name;
+    bsp_path.replace_extension(".bsp");
+
+    // if we have an output directory set, extract the filename from the .map
+    // and add an arg as <output>/map.bsp
+    QString output_dir_trimmed = output_dir->text().trimmed();
+    if (!output_dir_trimmed.isEmpty()) {
+        // does it end with a slash?
+        if (output_dir_trimmed.endsWith('/') || output_dir_trimmed.endsWith('\\')) {
+            // chop off the slash
+            output_dir_trimmed.chop(1);
+        }
+
+        // format a new output path, which may be relative
+        bsp_path = fmt::format("{}/{}", output_dir_trimmed.toStdString(), bsp_path.filename());
+    }
+
+    // add the bsp output filename to the end of the qbsp args
+    args.push_back(bsp_path.string());
 
     // run qbsp
     m_activeLogTab = ETLogTab::TAB_BSP;
@@ -543,7 +564,7 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
         for (auto &extra : extra_vis_args) {
             vis_args.push_back(extra);
         }
-        vis_args.push_back(name.string());
+        vis_args.push_back(bsp_path.string());
         vis_main(vis_args);
     }
 
@@ -561,8 +582,7 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
         for (auto &arg : extra_light_args) {
             light_args.push_back(arg);
         }
-        light_args.push_back(name.string());
-
+        light_args.push_back(bsp_path.string());
         light_main(light_args);
     }
 
@@ -788,6 +808,7 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     s.setValue("vis_enabled", vis_checkbox->isChecked());
     s.setValue("vis_options", vis_options->text());
     s.setValue("light_options", light_options->text());
+    s.setValue("output_dir", output_dir->text());
     s.setValue("nearest", nearest->isChecked());
     s.setValue("overbright", overbright->isChecked());
 
