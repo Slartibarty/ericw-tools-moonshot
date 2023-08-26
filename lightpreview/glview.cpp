@@ -56,6 +56,7 @@ GLView::GLView(QWidget *parent)
       m_portalIndexBuffer(QOpenGLBuffer::IndexBuffer)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
+    setTextureFormat(GL_SRGB8_ALPHA8);
 }
 
 GLView::~GLView()
@@ -161,6 +162,7 @@ uniform float opacity;
 uniform bool alpha_test;
 uniform bool lightmap_only;
 uniform bool fullbright;
+uniform bool overbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
@@ -193,8 +195,11 @@ void main() {
             }
         }
 
-        // 2.0 for overbright
-        color = vec4(texcolor * lmcolor * 2.0, opacity);
+        // overbright means multiplying the LM by 2
+        // (usually rangescale in light.exe is 0.5 to compensate for 8-bit precision loss)
+        float overbrightFactor = overbright ? 2.0 : 1.0;
+
+        color = vec4(texcolor * lmcolor * overbrightFactor, opacity);
     }
 }
 )";
@@ -258,6 +263,7 @@ uniform samplerCube texture_sampler;
 uniform sampler2DArray lightmap_sampler;
 uniform bool lightmap_only;
 uniform bool fullbright;
+uniform bool overbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
@@ -285,8 +291,11 @@ void main() {
                 lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
 
-            // 2.0 for overbright
-            color = vec4(lmcolor * 2.0, 1.0);
+            // overbright means multiplying the LM by 2
+            // (usually rangescale in light.exe is 0.5 to compensate for 8-bit precision loss)
+            float overbrightFactor = overbright ? 2.0 : 1.0;
+
+            color = vec4(lmcolor * overbrightFactor, 1.0);
         }
         else
         {
@@ -440,6 +449,11 @@ void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
     qDebug() << debugMessage.message();
 }
 
+QOpenGLTexture::TextureFormat GLView::getDefaultTextureFormat()
+{
+    return m_srgb ? QOpenGLTexture::TextureFormat::SRGB8_Alpha8 : QOpenGLTexture::TextureFormat::RGBA8_UNorm;
+}
+
 void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -483,6 +497,7 @@ void GLView::initializeGL()
     m_program_alpha_test_location = m_program->uniformLocation("alpha_test");
     m_program_lightmap_only_location = m_program->uniformLocation("lightmap_only");
     m_program_fullbright_location = m_program->uniformLocation("fullbright");
+    m_program_overbright_location = m_program->uniformLocation("overbright");
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
@@ -497,6 +512,7 @@ void GLView::initializeGL()
     m_skybox_program_opacity_location = m_skybox_program->uniformLocation("opacity");
     m_skybox_program_lightmap_only_location = m_skybox_program->uniformLocation("lightmap_only");
     m_skybox_program_fullbright_location = m_skybox_program->uniformLocation("fullbright");
+    m_skybox_program_overbright_location = m_skybox_program->uniformLocation("overbright");
     m_skybox_program_drawnormals_location = m_skybox_program->uniformLocation("drawnormals");
     m_skybox_program_drawflat_location = m_skybox_program->uniformLocation("drawflat");
     m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
@@ -516,6 +532,10 @@ void GLView::initializeGL()
     m_vao.create();
     m_leakVao.create();
     m_portalVao.create();
+
+    if (m_srgb) {
+        glEnable(GL_FRAMEBUFFER_SRGB);
+    }
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -566,6 +586,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_alpha_test_location, false);
     m_program->setUniformValue(m_program_lightmap_only_location, m_lighmapOnly);
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
+    m_program->setUniformValue(m_program_overbright_location, m_overbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
 
@@ -578,6 +599,7 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_opacity_location, 1.0f);
     m_skybox_program->setUniformValue(m_skybox_program_lightmap_only_location, m_lighmapOnly);
     m_skybox_program->setUniformValue(m_skybox_program_fullbright_location, m_fullbright);
+    m_skybox_program->setUniformValue(m_skybox_program_overbright_location, m_overbright);
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
 
@@ -750,6 +772,12 @@ void GLView::setLighmapOnly(bool lighmapOnly)
 void GLView::setFullbright(bool fullbright)
 {
     m_fullbright = fullbright;
+    update();
+}
+
+void GLView::setOverbright(bool overbright)
+{
+    m_overbright = overbright;
     update();
 }
 
@@ -945,7 +973,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
         lightmap_texture->setSize(lm_tex.width, lm_tex.height);
         lightmap_texture->setLayers(highest_depth + 1);
-        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        lightmap_texture->setFormat(getDefaultTextureFormat());
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
@@ -961,7 +989,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     {
         placeholder_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
         placeholder_texture->setSize(64, 64);
-        placeholder_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        placeholder_texture->setFormat(getDefaultTextureFormat());
         placeholder_texture->setAutoMipMapGenerationEnabled(true);
         placeholder_texture->setMagnificationFilter(m_filter);
         placeholder_texture->setMinificationFilter(QOpenGLTexture::Linear);
@@ -1099,7 +1127,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             }
 
             skybox_texture->setSize(up_img.width(), up_img.height());
-            skybox_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+            skybox_texture->setFormat(getDefaultTextureFormat());
             skybox_texture->setAutoMipMapGenerationEnabled(true);
             skybox_texture->setMagnificationFilter(m_filter);
             skybox_texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
@@ -1264,7 +1292,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             qtexture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
 
             qtexture->setSize(texture->width, texture->height);
-            qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+            qtexture->setFormat(getDefaultTextureFormat());
 
             qtexture->allocateStorage();
 

@@ -32,12 +32,13 @@ int main(int argc, char *argv[])
 
     QApplication a(argc, argv);
 
-    QSurfaceFormat fmt;
+    QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
     fmt.setVersion(3, 3);
     fmt.setProfile(QSurfaceFormat::CoreProfile);
 #ifdef _DEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
+    fmt.setColorSpace(QSurfaceFormat::sRGBColorSpace);
     QSurfaceFormat::setDefaultFormat(fmt);
 
     MainWindow w;
