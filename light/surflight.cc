@@ -49,6 +49,16 @@ size_t GetSurflightPoints()
     return total_surflight_points;
 }
 
+// simple function to convert from SRGB colour space to linear colour space
+static float srgb_to_linear(float color)
+{
+    bool isLo = color <= 0.04045f;
+
+    float loPart = color / 12.92f;
+    float hiPart = pow((color + 0.055f) / 1.055f, (12.0f / 5.0f));
+    return mix(hiPart, loPart, isLo);
+}
+
 int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::string &targetname);
 
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
@@ -90,18 +100,30 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         }
     }
 
+    // Convert to 0-1
     texture_color.value() /= 255.0;
-    texture_color.value() *= light_value; // Scale by light value
+
+    // Convert from SRGB to linear (but only when not in legacy mode)
+    if (light_options.nolegacy.value()) {
+        for (int i = 0; i < 3; ++i) {
+            texture_color.value()[i] = srgb_to_linear(texture_color.value()[i]);
+        }
+    }
+
+    // Scale by light value
+    texture_color.value() *= light_value;
 
     // Calculate intensity...
-    float intensity = qv::max(texture_color.value());
+    float intensity =
+        texture_color.value()[0] * 0.2126f +
+        texture_color.value()[1] * 0.7152f +
+        texture_color.value()[2] * 0.0722f;
 
     if (intensity == 0.0f)
         return;
 
     // Normalize color...
-    if (intensity > 1.0f)
-        texture_color.value() *= 1.0f / intensity;
+    qv::normalizeInPlace(texture_color.value());
 
     if (!surf.vpl) {
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();
@@ -203,8 +225,25 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     setting.rescale = extended_flags.surflight_rescale;
 
     // Store surfacelight settings...
-    setting.totalintensity = intensity * facearea;
-    setting.intensity = setting.totalintensity / l->points_before_culling;
+    if (!light_options.nolegacy.value()) {
+        // Use this heuristic from VHLT for scaling texture lights
+        constexpr float DIRECT_SCALE = 1.0 / Q_PI;
+        setting.totalintensity = intensity * facearea * DIRECT_SCALE;
+        setting.intensity = setting.totalintensity / l->points_before_culling;
+    } else {
+#if 0
+        // Source engine method
+        constexpr float DIRECT_SCALE = (100.0f * 100.0f);
+        setting.totalintensity = intensity * DIRECT_SCALE;
+        setting.intensity = setting.totalintensity / l->points_before_culling;
+        setting.totalintensity = setting.intensity * l->points_before_culling;
+#else
+        // ericw method
+        setting.totalintensity = intensity * facearea;
+        setting.intensity = setting.totalintensity / l->points_before_culling;
+#endif
+    }
+
     setting.color = texture_color.value();
 }
 

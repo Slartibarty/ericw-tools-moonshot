@@ -1561,12 +1561,19 @@ int light_main(int argc, const char **argv)
             if (!light_options.phongangle.is_changed()) {
                 light_options.phongangle.set_value(50.0, settings::source::GAME_TARGET);
             }
-            // always move the lightmap into gamma 2.2 space
-            // usually, the gamma is 1.0, which means the lightmap is in linear space
-            // but accounting for this in shaders results in massive color precision loss,
-            // so doing it here is extremely beneficial.
-            if (!light_options.lightmapgamma.is_changed()) {
-                light_options.lightmapgamma.set_value(2.2, settings::source::GAME_TARGET);
+            /*if (!light_options.nolegacy.value()) {
+                // Use a gamma of 1.8, matching VHLT
+                if (!light_options.lightmapgamma.is_changed()) {
+                    light_options.lightmapgamma.set_value(1.8, settings::source::GAME_TARGET);
+                }
+            } else*/ {
+                // always move the lightmap into gamma 2.2 space
+                // usually, the gamma is 1.0, which means the lightmap is in linear space
+                // but accounting for this in shaders results in massive color precision loss,
+                // so doing it here is extremely beneficial.
+                if (!light_options.lightmapgamma.is_changed()) {
+                    light_options.lightmapgamma.set_value(2.2, settings::source::GAME_TARGET);
+                }
             }
         }
 

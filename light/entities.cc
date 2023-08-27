@@ -87,7 +87,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 light_t::light_t()
     : light{this, "light", DEFAULTLIGHTLEVEL},
       atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()},
-      formula{this, "delay", LF_LINEAR,
+      formula{this, "delay", LF_INVERSE2,
           {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
               {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
       cone{this, "cone", 10.f},
@@ -990,6 +990,21 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
             // populate settings
             entity->set_settings(*entity->epairs, settings::source::MAP);
+
+            // check to see if we have a Half-Life style _light key
+            if (bsp->loadversion->game->subid == SUBGAME_MOONSHOT) {
+                const std::string &light_hl = entdict.get("_light");
+                if (!light_hl.empty()) {
+                    qvec4i color{};
+                    int num_args = sscanf(light_hl.c_str(), "%d %d %d %d", &color[0], &color[1], &color[2], &color[3]);
+                    if (num_args == 1) {
+                        entity->light.set_value(color[0], settings::source::MAP);
+                    } else if (num_args == 4) {
+                        entity->color.set_value(qvec3d(color[0], color[1], color[2]), settings::source::MAP);
+                        entity->light.set_value(color[3], settings::source::MAP);
+                    }
+                }
+            }
 
             if (entity->mangle.is_changed()) {
                 entity->spotvec = qv::vec_from_mangle(entity->mangle.value());
