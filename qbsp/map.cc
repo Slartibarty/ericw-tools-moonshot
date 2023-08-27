@@ -3136,6 +3136,13 @@ void ProcessMapBrushes()
             /* Origin brush support */
             entity.rotation = rotation_t::none;
 
+            // if our origin was set by ParseEpair, assume we want
+            // to offset our brushes (Source engine style brushes
+            // have their origin in their epairs, set by the editor)
+            if (!qv::emptyExact(entity.origin)) {
+                entity.rotation = rotation_t::origin_brush;
+            }
+
             /* entities with custom lmscales are important for the qbsp to know about */
             int i = 16 * entity.epairs.get_float("_lmscale");
             if (!i) {
@@ -3152,6 +3159,10 @@ void ProcessMapBrushes()
             if (entity.epairs.get("classname") == "func_areaportal") {
                 areaportal = &entity;
             }
+
+            // to support origin keys on entities, we must keep track
+            // of whether we've found an origin brush on this entity
+            bool found_origin_brush = false;
 
             for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end();) {
                 auto &brush = *it;
@@ -3182,7 +3193,7 @@ void ProcessMapBrushes()
                 if (brush.contents.is_origin(qbsp_options.target_game)) {
                     if (map.is_world_entity(entity)) {
                         logging::print("WARNING: Ignoring origin brush in worldspawn\n");
-                    } else if (entity.epairs.has("origin")) {
+                    } else if (found_origin_brush) {
                         // fixme-brushbsp: entity.line
                         logging::print(
                             "WARNING: Entity at {} has multiple origin brushes\n", entity.mapbrushes.front().line);
@@ -3190,6 +3201,8 @@ void ProcessMapBrushes()
                         entity.origin = brush.bounds.centroid();
                         entity.epairs.set("origin", qv::to_string(entity.origin));
                     }
+
+                    found_origin_brush = true;
 
                     stats.utility_brushes++;
                     // this is kinda slow but since most origin brushes are in
