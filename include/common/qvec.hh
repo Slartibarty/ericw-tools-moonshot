@@ -737,6 +737,7 @@ using qvec4d = qvec<double, 4>;
 
 using qvec2i = qvec<int32_t, 2>;
 using qvec3i = qvec<int32_t, 3>;
+using qvec4i = qvec<int32_t, 4>;
 
 using qvec3s = qvec<int16_t, 3>;
 using qvec3b = qvec<uint8_t, 3>;
