@@ -600,6 +600,7 @@ public:
     setting_enum<search_priority_t> filepriority;
     setting_set paths;
     setting_bool q2rtx;
+    setting_bool nolegacy;
     setting_invertible_bool defaultpaths;
 
     common_settings();
