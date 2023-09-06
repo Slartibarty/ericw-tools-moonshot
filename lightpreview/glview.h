@@ -98,6 +98,7 @@ private:
     bool m_drawLeak = false;
     bool m_srgb = true;
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
+    bool m_drawTranslucencyAsOpaque = false;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -212,6 +213,7 @@ public:
     void setLightStyleIntensity(int style_id, int intensity);
     void setMagFilter(QOpenGLTexture::Filter filter);
     const bool &getKeepOrigin() const { return m_keepOrigin; }
+    void setDrawTranslucencyAsOpaque(bool drawopaque);
 
     void takeScreenshot(QString destPath, int w, int h);
 

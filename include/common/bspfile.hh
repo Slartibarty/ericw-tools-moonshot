@@ -152,7 +152,7 @@ struct surfflags_t
 
     // if true, rescales any surface light emitted by these brushes to emit 50% light at 90 degrees from the surface
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
-    bool surflight_rescale = true;
+    std::optional<bool> surflight_rescale;
 
     // override surface lighting style
     std::optional<int32_t> surflight_style;
@@ -183,6 +183,9 @@ struct surfflags_t
 
     // custom opacity
     std::optional<vec_t> light_alpha;
+
+    // two-sided lighting
+    std::optional<bool> light_twosided;
 
     // maxlight value for this face
     vec_t maxlight;

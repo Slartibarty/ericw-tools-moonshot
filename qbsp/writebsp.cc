@@ -381,8 +381,8 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.light_ignore) {
             t["light_ignore"] = tx.flags.light_ignore;
         }
-        if (tx.flags.surflight_rescale == false) {
-            t["surflight_rescale"] = tx.flags.surflight_rescale;
+        if (tx.flags.surflight_rescale) {
+            t["surflight_rescale"] = tx.flags.surflight_rescale.value();
         }
         if (tx.flags.surflight_style.has_value()) {
             t["surflight_style"] = tx.flags.surflight_style.value();
@@ -416,6 +416,9 @@ static void WriteExtendedTexinfoFlags(void)
         }
         if (tx.flags.light_alpha) {
             t["light_alpha"] = *tx.flags.light_alpha;
+        }
+        if (tx.flags.light_twosided) {
+            t["light_twosided"] = *tx.flags.light_twosided;
         }
         if (tx.flags.lightcolorscale != 1.0) {
             t["lightcolorscale"] = tx.flags.lightcolorscale;

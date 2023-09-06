@@ -86,14 +86,12 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 }
 
 static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
-    qvec3d texture_color, int32_t style, const std::vector<qvec3f> &points, const polylib::winding_t &winding,
+    qvec3d texture_color, int32_t style, std::vector<qvec3f> &points,
     const vec_t &area, const qvec3d &facenormal, const qvec3d &facemidpoint)
 {
     if (!Face_IsEmissive(bsp, surf.face)) {
         return;
     }
-
-    bouncelightpoints += points.size();
 
     // Calculate emit color and intensity...
 
@@ -104,20 +102,20 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
         return;
     }
 
+    // Normalize color...
+    if (intensity > 1.0) {
+        texture_color *= 1.0 / intensity;
+    }
+
     if (!surf.vpl) {
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();
-
-        // Normalize color...
-        if (intensity > 1.0) {
-            texture_color *= 1.0 / intensity;
-        }
 
         // Sanity checks...
         Q_assert(!points.empty());
 
         // Add surfacelight...
         l->surfnormal = facenormal;
-        l->points = points;
+        l->points = std::move(points);
 
         // Init bbox...
         if (light_options.visapprox.value() == visapprox_t::RAYS) {
@@ -240,7 +238,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     for (auto &style : emitcolors) {
-        MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, winding, area, facenormal, facemidpoint);
+        MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, area, facenormal, facemidpoint);
     }
 }
 

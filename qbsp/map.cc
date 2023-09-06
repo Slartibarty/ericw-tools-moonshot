@@ -678,8 +678,9 @@ static surfflags_t SurfFlagsForEntity(
         flags.no_minlight = true;
     if (entity.epairs.get_int("_lightignore") == 1)
         flags.light_ignore = true;
-    if (entity.epairs.has("_surflight_rescale") && entity.epairs.get_int("_surflight_rescale") == 0)
-        flags.surflight_rescale = false;
+    if (entity.epairs.has("_surflight_rescale")) {
+        flags.surflight_rescale = entity.epairs.get_int("_surflight_rescale") == 1;
+    }
     {
         qvec3d color;
         // FIXME: get_color, to match settings
@@ -819,6 +820,11 @@ static surfflags_t SurfFlagsForEntity(
     if (entity.epairs.has("_light_alpha")) {
         const vec_t lightalpha = entity.epairs.get_float("_light_alpha");
         flags.light_alpha = std::clamp(lightalpha, 0.0, 1.0);
+    }
+
+    // handle "_light_twosided"
+    if (entity.epairs.has("_light_twosided")) {
+        flags.light_twosided = entity.epairs.get_int("_light_twosided");
     }
 
     return flags;
@@ -2726,9 +2732,7 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &is
                     }
                 } while (parser.token != "}");
             } else {
-                auto brush = ParseBrush(parser, entity, issue_stats);
-
-                if (brush.faces.size()) {
+                if (auto brush = ParseBrush(parser, entity, issue_stats); brush.faces.size()) {
                     entity.mapbrushes.push_back(std::move(brush));
                 }
             }

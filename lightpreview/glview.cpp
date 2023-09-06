@@ -603,9 +603,17 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
 
+    // resolves whether to render a particular drawcall as opaque
+    auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
+        if (m_drawTranslucencyAsOpaque)
+            return true;
+
+        return draw.key.opacity == 1.0f;
+    };
+
     // opaque draws
     for (auto &draw : m_drawcalls) {
-        if (draw.key.opacity != 1.0f)
+        if (!draw_as_opaque(draw))
             continue;
 
         if (active_program != draw.key.program) {
@@ -625,6 +633,12 @@ void GLView::paintGL()
             face_visibility_texture->bind(2 /* texture unit */);
         }
 
+        if (active_program == m_program) {
+            m_program->setUniformValue(m_program_opacity_location, 1.0f);
+        } else {
+            m_skybox_program->setUniformValue(m_skybox_program_opacity_location, 1.0f);
+        }
+
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
         glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
@@ -637,7 +651,7 @@ void GLView::paintGL()
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         for (auto &draw : m_drawcalls) {
-            if (draw.key.opacity == 1.0f)
+            if (draw_as_opaque(draw))
                 continue;
 
             if (active_program != draw.key.program) {
@@ -848,6 +862,12 @@ void GLView::setMagFilter(QOpenGLTexture::Filter filter)
         dc.texture->setMagnificationFilter(m_filter);
     }
 
+    update();
+}
+
+void GLView::setDrawTranslucencyAsOpaque(bool drawopaque)
+{
+    m_drawTranslucencyAsOpaque = drawopaque;
     update();
 }
 
@@ -1232,6 +1252,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             qtexture = placeholder_texture;
         }
 
+        if (texture->pixels.empty()) {
+            logging::print("warning, empty texture pixels {}", k.texname);
+            qtexture = placeholder_texture;
+        }
+
         const size_t dc_first_index = indexBuffer.size();
 
         if (k.program == m_skybox_program) {
@@ -1400,7 +1425,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             double y = split[1].toDouble();
             double z = split[2].toDouble();
 
-            points.emplace_back(qvec3f{(float)x, (float)y, (float)z});
+            points.push_back(simple_vertex_t{qvec3f{(float)x, (float)y, (float)z}});
 
             num_leak_points++;
         }
@@ -1436,7 +1461,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             for (auto &pt : portal.winding) {
                 indices.push_back(current_index++);
-                points.emplace_back(pt);
+                points.push_back(simple_vertex_t{qvec3f{pt}});
             }
 
             indices.push_back((GLuint)-1);

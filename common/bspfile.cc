@@ -973,7 +973,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 template<gameid_t ID>
 struct gamedef_q2_like_t : public gamedef_t
 {
-    explicit gamedef_q2_like_t(const char *base_dir = "BASEQ2")
+    explicit gamedef_q2_like_t(const char *base_dir = "baseq2")
         : gamedef_t(base_dir)
     {
         this->id = ID;
@@ -1901,7 +1901,7 @@ static auto as_tuple(const surfflags_t &flags)
         flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
         flags.surflight_rescale, flags.surflight_style, flags.surflight_color, flags.surflight_minlight_scale,
         flags.surflight_targetname, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
-        flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
+        flags.minlight_color, flags.light_alpha, flags.light_twosided, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
         flags.world_units_per_luxel, flags.object_channel_mask);
 }
 

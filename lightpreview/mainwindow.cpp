@@ -160,6 +160,18 @@ void MainWindow::createPropertiesSidebar()
     auto *normals = new QRadioButton(tr("Normals"));
     auto *drawflat = new QRadioButton(tr("Flat shading"));
 
+    lightmapped->setShortcut(QKeySequence("Alt+1"));
+    lightmap_only->setShortcut(QKeySequence("Alt+2"));
+    fullbright->setShortcut(QKeySequence("Alt+3"));
+    normals->setShortcut(QKeySequence("Alt+4"));
+    drawflat->setShortcut(QKeySequence("Alt+5"));
+
+    lightmapped->setToolTip("Lighmapped textures (Alt+1)");
+    lightmap_only->setToolTip("Lightmap only (Alt+2)");
+    fullbright->setToolTip("Textures without lightmap (Alt+3)");
+    normals->setToolTip("Visualize normals (Alt+4)");
+    drawflat->setToolTip("Flat-shaded polygons (Alt+5)");
+
     auto *rendermode_layout = new QVBoxLayout();
     rendermode_layout->addWidget(lightmapped);
     rendermode_layout->addWidget(lightmap_only);
@@ -189,6 +201,8 @@ void MainWindow::createPropertiesSidebar()
     bspx_normals = new QCheckBox(tr("BSPX: Face Normals"));
     bspx_normals->setChecked(true);
 
+    auto *draw_opaque = new QCheckBox(tr("Draw Translucency as Opaque"));
+
     formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
@@ -206,6 +220,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(overbright);
     formLayout->addRow(bspx_decoupled_lm);
     formLayout->addRow(bspx_normals);
+    formLayout->addRow(draw_opaque);
 
     lightstyles = new QVBoxLayout();
 
@@ -263,6 +278,8 @@ void MainWindow::createPropertiesSidebar()
     connect(nearest, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
     connect(overbright, &QAbstractButton::toggled, this, [=](bool checked) { glView->setOverbright(checked); });
+    connect(draw_opaque, &QAbstractButton::toggled, this,
+        [=](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
 
     // set up load timer
@@ -505,7 +522,8 @@ std::filesystem::path MakeFSPath(const QString &string)
 }
 
 bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_common_args,
-    std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
+    std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args,
+    std::vector<std::string> extra_light_args, bool run_vis)
 {
     auto resetActiveTabText = [&]() {
         QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
@@ -706,8 +724,8 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
             ConvertBSPFormat(&m_bspdata, &bspver_generic);
 
         } else {
-            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options), ParseArgs(vis_options),
-                ParseArgs(light_options), vis_checkbox->isChecked());
+            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options),
+                ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
 
             // FIXME: move to a lightpreview_settings
             settings::common_settings settings;
@@ -718,20 +736,34 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
             m_bspdata.loadversion->game->init_filesystem(file.toStdString(), settings);
         }
     } catch (const settings::parse_exception &p) {
+        // FIXME: threading error: don't call Qt widgets code from background thread
         auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
         textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
         return 1;
     } catch (const settings::quit_after_help_exception &p) {
+        // FIXME: threading error: don't call Qt widgets code from background thread
         auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
         textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
         return 1;
     } catch (const std::exception &other) {
+        // FIXME: threading error: don't call Qt widgets code from background thread
         auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
         textEdit->append(QString::fromUtf8(other.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
         return 1;
+    }
+
+    // try to load .lit
+    auto lit_path = fs_path;
+    lit_path.replace_extension(".lit");
+
+    try {
+        m_litdata = LoadLitFile(lit_path);
+    } catch (const std::runtime_error &error) {
+        logging::print("error loading lit: {}", error.what());
+        m_litdata = {};
     }
 
     return 0;
@@ -755,7 +787,7 @@ void MainWindow::compileThreadExited()
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, false, bspx_decoupled_lm->isChecked());
+    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, false, bspx_decoupled_lm->isChecked());
 
     glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 

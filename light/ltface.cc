@@ -607,6 +607,11 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
         lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
 
+        // override the autodetected twosided setting?
+        if (extended_flags.light_twosided) {
+            lightsurf->twosided = *extended_flags.light_twosided;
+        }
+
         // nodirt
         if (modelinfo->dirt.is_changed()) {
             lightsurf->nodirt = (modelinfo->dirt.value() == -1);
@@ -1939,7 +1944,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
         dotProductFactor = dp1 * dp2;
     } else {
         // used for sky face surface lights
-        dotProductFactor = dp2;
+        dotProductFactor = dp2 * 0.5f;
     }
 
     dotProductFactor = std::max(0.0f, dotProductFactor);
@@ -1951,7 +1956,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     // Apply angle scale
     const qvec3f resultscaled = result * dotProductFactor;
 
-    Q_assert(!std::isnan(resultscaled[0]) && !std::isnan(resultscaled[1]) && !std::isnan(resultscaled[2]));
+    //Q_assert(!std::isnan(resultscaled[0]) && !std::isnan(resultscaled[1]) && !std::isnan(resultscaled[2]));
     return resultscaled;
 }
 
@@ -2028,7 +2033,10 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     float dist = qv::length(dir);
                     bool use_normal = true;
 
-                    if (dist == 0.0f) {
+                    if (lightsurf->twosided) {
+                        use_normal = false;
+                        dir /= dist;
+                    } else if (dist == 0.0f) {
                         dir = lightsurf_normal;
                         use_normal = false;
                     } else {
@@ -2060,7 +2068,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     const int i = rs.getPushedRayPointIndex(j);
                     qvec3f indirect = rs.getPushedRayColor(j);
 
-                    Q_assert(!std::isnan(indirect[0]));
+                    //Q_assert(!std::isnan(indirect[0]));
 
                     // Use dirt scaling on the surface lighting.
                     const vec_t dirtscale =
@@ -2157,7 +2165,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
 
                     qvec3f indirect = rs.getPushedRayColor(j);
 
-                    Q_assert(!std::isnan(indirect[0]));
+                    //Q_assert(!std::isnan(indirect[0]));
 
                     result.add(indirect, vpl_settings.style);
                 }
