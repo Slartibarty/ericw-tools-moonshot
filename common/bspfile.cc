@@ -1705,7 +1705,8 @@ const std::initializer_list<const gamedef_t *> &gamedef_list()
         &gamedef_q1,
         &gamedef_h2,
         &gamedef_hl,
-        &gamedef_q2
+        &gamedef_q2,
+        &gamedef_moonshot
     };
     return gamedefs;
 }
