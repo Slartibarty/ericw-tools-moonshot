@@ -30,6 +30,7 @@ See file, 'COPYING', for details.
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 #include <common/parallel.hh>
+#include <common/color.hh>
 
 #include <vector>
 #include <map>
@@ -47,16 +48,6 @@ void ResetSurflight()
 size_t GetSurflightPoints()
 {
     return total_surflight_points;
-}
-
-// simple function to convert from SRGB colour space to linear colour space
-static float srgb_to_linear(float color)
-{
-    bool isLo = color <= 0.04045f;
-
-    float loPart = color / 12.92f;
-    float hiPart = pow((color + 0.055f) / 1.055f, (12.0f / 5.0f));
-    return mix(hiPart, loPart, isLo);
 }
 
 int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::string &targetname);
@@ -86,6 +77,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     if (extended_flags.surflight_color.has_value()) {
         texture_color = extended_flags.surflight_color.value();
+        // Convert to 0-1
+        texture_color.value() /= 255.0f;
     } else {
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (!texture_color.has_value()) {
@@ -93,20 +86,10 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
                 // FIXME: this only handles the "_sky_surface"  "red green blue" format.
                 //        There are other more complex variants we could handle documented in the link above.
                 // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-                texture_color = cfg.sky_surface.value() * 255.0;
+                texture_color = cfg.sky_surface.value();
             } else {
-                texture_color = qvec3f(Face_LookupTextureColor(bsp, face));
+                texture_color = Face_LookupTextureColor(bsp, face);
             }
-        }
-    }
-
-    // Convert to 0-1
-    texture_color.value() /= 255.0;
-
-    // Convert from SRGB to linear (but only when not in legacy mode)
-    if (light_options.nolegacy.value()) {
-        for (int i = 0; i < 3; ++i) {
-            texture_color.value()[i] = srgb_to_linear(texture_color.value()[i]);
         }
     }
 
@@ -115,9 +98,9 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Calculate intensity...
     float intensity =
-        texture_color.value()[0] * 0.2126f +
-        texture_color.value()[1] * 0.7152f +
-        texture_color.value()[2] * 0.0722f;
+        texture_color.value()[0] +
+        texture_color.value()[1] +
+        texture_color.value()[2];
 
     if (intensity == 0.0f)
         return;

@@ -80,7 +80,7 @@ struct texture
 
     // This member is only set before insertion into the table
     // and not calculated by individual load functions.
-    qvec3b averageColor{0};
+    qvec3f averageColor{0};
 };
 
 extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
@@ -88,7 +88,7 @@ extern std::unordered_map<std::string, texture, case_insensitive_hash, case_inse
 // clears the texture cache
 void clear();
 
-qvec3b calculate_average(const std::vector<qvec4b> &pixels);
+qvec3f calculate_average(const std::vector<qvec4b> &pixels);
 
 const texture *find(const std::string_view &str);
 

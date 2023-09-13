@@ -28,6 +28,7 @@
 #include <light/ltface.hh>
 #include <light/surflight.hh>
 #include <light/trace.hh> // for Light_PointInLeaf
+#include <common/color.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
@@ -96,6 +97,35 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     // Calculate emit color and intensity...
 
     // Calculate intensity...
+#if 0
+    // Convert to 0-1
+    texture_color /= 255.0;
+
+    vec_t intensity;
+
+    // Convert from SRGB to linear (but only when not in legacy mode)
+    if (light_options.nolegacy.value()) {
+        for (int i = 0; i < 3; ++i) {
+            texture_color[i] = srgb_to_linear(texture_color[i]);
+        }
+        intensity =
+            texture_color[0] +
+            texture_color[1] +
+            texture_color[2];
+    } else {
+        intensity =
+            texture_color[0] * 0.2126 +
+            texture_color[1] * 0.7152 +
+            texture_color[2] * 0.0722;
+    }
+
+    if (intensity <= 0.0) {
+        return;
+    }
+
+    // Normalize color...
+    qv::normalizeInPlace(texture_color);
+#else
     vec_t intensity = qv::max(texture_color);
 
     if (intensity <= 0.0) {
@@ -106,6 +136,7 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     if (intensity > 1.0) {
         texture_color *= 1.0 / intensity;
     }
+#endif
 
     if (!surf.vpl) {
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();

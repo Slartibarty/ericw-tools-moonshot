@@ -636,7 +636,7 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 struct face_texture_cache
 {
     const img::texture *image;
-    qvec3b averageColor;
+    qvec3f averageColor;
     qvec3d bounceColor;
 };
 
@@ -647,7 +647,7 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
     return face_textures[face - bsp->dfaces.data()].image;
 }
 
-const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
+const qvec3f &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
 {
     return face_textures[face - bsp->dfaces.data()].averageColor;
 }
@@ -671,7 +671,7 @@ static void CacheTextures(const mbsp_t &bsp)
             face_textures[i] = {tex, tex->averageColor,
                 // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use
                 // texture color)
-                mix(qvec3d{127}, qvec3d(tex->averageColor), light_options.bouncecolorscale.value()) / 255.0};
+                mix(qvec3f{0.5}, tex->averageColor, light_options.bouncecolorscale.value())};
         }
     }
 }

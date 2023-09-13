@@ -1672,7 +1672,7 @@ public:
 struct gamedef_moonshot_t : public gamedef_q2_like_t<GAME_QUAKE_II>
 {
     gamedef_moonshot_t()
-        : gamedef_q2_like_t("moonoshot", "valve")
+        : gamedef_q2_like_t("moonshot", "valve")
     {
         subid = SUBGAME_MOONSHOT;
     }
