@@ -124,7 +124,7 @@ MainWindow::MainWindow(QWidget *parent)
     // create the menu first as it is used by other things (dock widgets)
     setupMenu();
 
-    resize(640, 480);
+    resize(1280, 480);
 
     // gl view
     glView = new GLView(this);
