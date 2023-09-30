@@ -1560,6 +1560,10 @@ int light_main(int argc, const char **argv)
             if (!light_options.novanilla.is_changed()) {
                 light_options.novanilla.set_value(true, settings::source::GAME_TARGET);
             }
+            // 8 bounces
+            if (!light_options.bounce.is_changed()) {
+                light_options.bounce.set_value(8, settings::source::GAME_TARGET);
+            }
             // always full bounce impact from textures
             if (!light_options.bouncecolorscale.is_changed()) {
                 light_options.bouncecolorscale.set_value(1.0, settings::source::GAME_TARGET);
@@ -1591,10 +1595,14 @@ int light_main(int argc, const char **argv)
                     light_options.lightmapgamma.set_value(2.2, settings::source::GAME_TARGET);
                 }
             }
+            // no halo around surface lights
+            if (!light_options.surflight_rescale.is_changed()) {
+                light_options.surflight_rescale.set_value(false, settings::source::GAME_TARGET);
+            }
         }
 
         if (!light_options.bounce.is_changed()) {
-            light_options.bounce.set_value(true, settings::source::GAME_TARGET);
+            light_options.bounce.set_value(1, settings::source::GAME_TARGET);
         }
         if (!light_options.surflight_radiosity.is_changed()) {
             light_options.surflight_radiosity.set_value(SURFLIGHT_RAD, settings::source::GAME_TARGET);
