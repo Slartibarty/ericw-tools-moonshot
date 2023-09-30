@@ -30,7 +30,6 @@ See file, 'COPYING', for details.
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 #include <common/parallel.hh>
-#include <common/color.hh>
 
 #include <vector>
 #include <map>
@@ -206,14 +205,14 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     if (extended_flags.surflight_rescale) {
         setting.rescale = extended_flags.surflight_rescale.value();
     } else {
-        setting.rescale = is_sky ? false : true;
+        setting.rescale = cfg.surflight_rescale.is_changed() ? cfg.surflight_rescale.value() : !is_sky;
     }
 
     // Store surfacelight settings...
     if (!light_options.nolegacy.value()) {
         // Use this heuristic from VHLT for scaling texture lights
         constexpr float DIRECT_SCALE = 1.0 / Q_PI;
-        setting.totalintensity = intensity * facearea * DIRECT_SCALE;
+        setting.totalintensity = (intensity * facearea) * DIRECT_SCALE;
         setting.intensity = setting.totalintensity / l->points_before_culling;
     } else {
 #if 0
@@ -286,7 +285,9 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
             std::optional<qvec3f> texture_color;
 
             if (surflight->color.is_changed()) {
-                texture_color = surflight->color.value();
+                // the surface light color is stored in 0-255 due to internal color mayhem
+                // convert it to 0-1 (FIXME)
+                texture_color = surflight->color.value() / 255.0f;
             }
 
             MakeSurfaceLight(bsp, cfg, face, texture_color,

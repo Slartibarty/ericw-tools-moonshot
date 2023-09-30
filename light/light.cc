@@ -168,6 +168,7 @@ worldspawn_keys::worldspawn_keys()
       rangescale{this, "range", 0.5, 0.0, 100.0, &worldspawn_group},
       global_anglescale{this, {"anglescale", "anglesense"}, 0.5, 0.0, 1.0, &worldspawn_group},
       lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group},
+      srgbpipeline{this, "srgbpipeline", false, &worldspawn_group},
       addminlight{this, "addmin", false, &worldspawn_group},
       minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
       minlightMottle{this, {"minlight_mottle", "minlightMottle"}, false, &worldspawn_group},
@@ -196,6 +197,7 @@ worldspawn_keys::worldspawn_keys()
       surflightskydist{this, "surflightskydist", 0.0, &worldspawn_group},
       surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.0f, 0.f, 510.f, &worldspawn_group},
+      surflight_rescale{this, "surflight_rescale", true, &worldspawn_group},
       sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
       sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
       sun2{this, "sun2", 0.0, &worldspawn_group},
@@ -665,7 +667,7 @@ static void CacheTextures(const mbsp_t &bsp)
         const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
 
         if (!name || !*name) {
-            face_textures[i] = {nullptr, {127}, {0.5}};
+            face_textures[i] = {nullptr, {0.5}, {0.5}};
         } else {
             auto tex = img::find(name);
             auto &ext = extended_texinfo_flags[bsp.dfaces[i].texinfo];
@@ -1165,7 +1167,7 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
             flags.surflight_targetname = val.at("surflight_targetname").get<std::string>();
         }
         if (val.contains("surflight_color")) {
-            flags.surflight_color = val.at("surflight_color").get<qvec3b>();
+            flags.surflight_color = val.at("surflight_color").get<qvec3f>();
         }
         if (val.contains("surflight_minlight_scale")) {
             flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<vec_t>();

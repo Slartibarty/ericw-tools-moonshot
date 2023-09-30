@@ -28,7 +28,6 @@
 #include <light/ltface.hh>
 #include <light/surflight.hh>
 #include <light/trace.hh> // for Light_PointInLeaf
-#include <common/color.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
