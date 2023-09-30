@@ -77,8 +77,6 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     if (extended_flags.surflight_color.has_value()) {
         texture_color = extended_flags.surflight_color.value();
-        // Convert to 0-1
-        texture_color.value() /= 255.0f;
     } else {
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (!texture_color.has_value()) {
@@ -97,16 +95,16 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     texture_color.value() *= light_value;
 
     // Calculate intensity...
-    float intensity =
-        texture_color.value()[0] +
-        texture_color.value()[1] +
-        texture_color.value()[2];
+    float intensity = qv::max(texture_color.value());
 
-    if (intensity == 0.0f)
+    if (intensity <= 0.0f) {
         return;
+    }
 
     // Normalize color...
-    qv::normalizeInPlace(texture_color.value());
+    if (intensity > 1.0f) {
+        texture_color.value() *= 1.0f / intensity;
+    }
 
     if (!surf.vpl) {
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();

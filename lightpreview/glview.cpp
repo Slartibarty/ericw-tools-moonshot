@@ -1326,7 +1326,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             int mipLevels = GetMipLevelsForDimensions(texture->width, texture->height);
 
-            qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+            qtexture->setFormat(getDefaultTextureFormat());
             qtexture->setSize(texture->width, texture->height);
             qtexture->setMipLevels(mipLevels);
 

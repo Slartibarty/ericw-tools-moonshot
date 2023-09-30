@@ -1574,8 +1574,9 @@ int light_main(int argc, const char **argv)
                 light_options.write_normals.set_value(true, settings::source::GAME_TARGET);
             }
             // always 50 degree phong angle
+            // TEMPTEMPTEMP: Turning this off until it stops breaking lighting around corners
             if (!light_options.phongangle.is_changed()) {
-                light_options.phongangle.set_value(50.0, settings::source::GAME_TARGET);
+                light_options.phongangle.set_value(0.0, settings::source::GAME_TARGET);
             }
             /*if (!light_options.nolegacy.value()) {
                 // Use a gamma of 1.8, matching VHLT

@@ -1677,6 +1677,33 @@ struct gamedef_moonshot_t : public gamedef_q2_like_t<GAME_QUAKE_II>
         subid = SUBGAME_MOONSHOT;
     }
 
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    {
+        /* don't save lightmaps for "trigger" texture even if light_nodraw is set */
+        if (std::string_view(texname).ends_with("/trigger")) {
+            return false;
+        }
+
+        // Q2RTX should light nodraw faces
+        if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
+            return true;
+        }
+
+        // Moonshot: Never light the sky
+        if (flags.native & Q2_SURF_SKY) {
+            return false;
+        }
+
+        return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
+    }
+
+    // Argh! Don't make sky surfaces emissive in Moonshot!
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
+    {
+        return !(flags.native & Q2_SURF_SKY);
+    }
+
     void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
     {
         img::clear();
