@@ -89,7 +89,11 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     // Calculate emit color and intensity...
 
     // Calculate intensity...
-    vec_t intensity = qv::max(texture_color);
+    //vec_t intensity = qv::max(texture_color);
+    vec_t intensity =
+            texture_color[0] * 0.2126 +
+            texture_color[1] * 0.7152 +
+            texture_color[2] * 0.0722;
 
     if (intensity <= 0.0) {
         return;

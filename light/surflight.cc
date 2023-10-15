@@ -94,7 +94,11 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     texture_color.value() *= light_value;
 
     // Calculate intensity...
-    float intensity = qv::max(texture_color.value());
+    //float intensity = qv::max(texture_color.value());
+    float intensity =
+        texture_color.value()[0] * 0.2126f +
+        texture_color.value()[1] * 0.7152f +
+        texture_color.value()[2] * 0.0722f;
 
     if (intensity <= 0.0f) {
         return;
