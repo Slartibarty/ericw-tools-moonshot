@@ -30,6 +30,7 @@ See file, 'COPYING', for details.
 #include <QVector3D>
 #include <QMatrix4x4>
 
+#include <optional>
 #include <vector>
 
 #include <common/qvec.hh>
@@ -68,10 +69,23 @@ private:
     float m_moveSpeed;
 
     // vis culling stuff
-    /**
-     * -1 indicates solid leaf or no visdata (render all)
-     */
-    int m_lastLeaf = -1;
+    struct face_visibility_key_t
+    {
+        bool show_bmodels;
+        // -1 indicates solid leaf or no visdata (render all world faces)
+        int leafnum;
+        // Q2 bsp: cluster num
+        // other: visofs
+        int clusternum;
+
+        bool operator==(const face_visibility_key_t &other) const
+        {
+            return show_bmodels == other.show_bmodels && leafnum == other.leafnum && clusternum == other.clusternum;
+        }
+    };
+    face_visibility_key_t desiredFaceVisibility() const;
+
+    std::optional<face_visibility_key_t> m_uploaded_face_visibility;
     bool m_visCulling = true;
 
     // camera stuff
@@ -90,6 +104,7 @@ private:
     bool m_fullbright = false;
     bool m_overbright = false;
     bool m_drawNormals = false;
+    std::optional<int> m_drawLeafs;
     bool m_showTris = false;
     bool m_showTrisSeeThrough = false;
     bool m_drawFlat = false;
@@ -99,6 +114,7 @@ private:
     bool m_srgb = true;
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
     bool m_drawTranslucencyAsOpaque = false;
+    bool m_showBmodels = true;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -110,6 +126,14 @@ private:
     QOpenGLVertexArrayObject m_portalVao;
     QOpenGLBuffer m_portalVbo;
     QOpenGLBuffer m_portalIndexBuffer;
+
+    struct leaf_vao_t {
+        QOpenGLVertexArrayObject vao;
+        QOpenGLBuffer vbo;
+        QOpenGLBuffer indexBuffer;
+        int num_indices = 0;
+    };
+    std::array<leaf_vao_t, MAX_MAP_HULLS_H2> m_hullVaos;
 
     // this determines what can be batched together in a draw call
     struct material_key
@@ -191,17 +215,18 @@ public:
 
 private:
     void setFaceVisibilityArray(uint8_t *data);
-    void setFaceVisibilityToAllVisible();
 
 public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
+    // FIXME: distinguish render modes from render options
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
     void setOverbright(bool overbright);
     void setDrawNormals(bool drawnormals);
+    void setDrawLeafs(std::optional<int> hullnum);
     void setShowTris(bool showtris);
     void setShowTrisSeeThrough(bool showtris);
     void setVisCulling(bool viscull);
@@ -214,6 +239,7 @@ public:
     void setMagFilter(QOpenGLTexture::Filter filter);
     const bool &getKeepOrigin() const { return m_keepOrigin; }
     void setDrawTranslucencyAsOpaque(bool drawopaque);
+    void setShowBmodels(bool bmodels);
 
     void takeScreenshot(QString destPath, int w, int h);
 

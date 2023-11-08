@@ -124,7 +124,7 @@ MainWindow::MainWindow(QWidget *parent)
     // create the menu first as it is used by other things (dock widgets)
     setupMenu();
 
-    resize(1280, 480);
+    resize(1280, 768);
 
     // gl view
     glView = new GLView(this);
@@ -136,6 +136,8 @@ MainWindow::MainWindow(QWidget *parent)
     createOutputLog();
 
     createStatusBar();
+
+    resize(1024, 768);
 }
 
 void MainWindow::createPropertiesSidebar()
@@ -159,12 +161,19 @@ void MainWindow::createPropertiesSidebar()
     auto *fullbright = new QRadioButton(tr("Fullbright"));
     auto *normals = new QRadioButton(tr("Normals"));
     auto *drawflat = new QRadioButton(tr("Flat shading"));
+    auto *hull0 = new QRadioButton(tr("Leafs"));
+    auto *hull1 = new QRadioButton(tr("Hull 1"));
+    auto *hull2 = new QRadioButton(tr("Hull 2"));
+    auto *hull3 = new QRadioButton(tr("Hull 3"));
+    auto *hull4 = new QRadioButton(tr("Hull 4"));
+    auto *hull5 = new QRadioButton(tr("Hull 5"));
 
     lightmapped->setShortcut(QKeySequence("Alt+1"));
     lightmap_only->setShortcut(QKeySequence("Alt+2"));
     fullbright->setShortcut(QKeySequence("Alt+3"));
     normals->setShortcut(QKeySequence("Alt+4"));
     drawflat->setShortcut(QKeySequence("Alt+5"));
+    hull0->setShortcut(QKeySequence("Alt+6"));
 
     lightmapped->setToolTip("Lighmapped textures (Alt+1)");
     lightmap_only->setToolTip("Lightmap only (Alt+2)");
@@ -178,6 +187,12 @@ void MainWindow::createPropertiesSidebar()
     rendermode_layout->addWidget(fullbright);
     rendermode_layout->addWidget(normals);
     rendermode_layout->addWidget(drawflat);
+    rendermode_layout->addWidget(hull0);
+    rendermode_layout->addWidget(hull1);
+    rendermode_layout->addWidget(hull2);
+    rendermode_layout->addWidget(hull3);
+    rendermode_layout->addWidget(hull4);
+    rendermode_layout->addWidget(hull5);
 
     auto *rendermode_group = new QGroupBox(tr("Render mode"));
     rendermode_group->setLayout(rendermode_layout);
@@ -202,6 +217,8 @@ void MainWindow::createPropertiesSidebar()
     bspx_normals->setChecked(true);
 
     auto *draw_opaque = new QCheckBox(tr("Draw Translucency as Opaque"));
+    auto *show_bmodels = new QCheckBox(tr("Show Bmodels"));
+    show_bmodels->setChecked(true);
 
     formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
@@ -221,6 +238,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(bspx_decoupled_lm);
     formLayout->addRow(bspx_normals);
     formLayout->addRow(draw_opaque);
+    formLayout->addRow(show_bmodels);
 
     lightstyles = new QVBoxLayout();
 
@@ -272,6 +290,12 @@ void MainWindow::createPropertiesSidebar()
         [=](bool checked) { glView->setShowTrisSeeThrough(checked); });
     connect(visculling, &QAbstractButton::toggled, this, [=](bool checked) { glView->setVisCulling(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
+    connect(hull0, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{0} : std::nullopt); });
+    connect(hull1, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{1} : std::nullopt); });
+    connect(hull2, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{2} : std::nullopt); });
+    connect(hull3, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{3} : std::nullopt); });
+    connect(hull4, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{4} : std::nullopt); });
+    connect(hull5, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{5} : std::nullopt); });
     connect(drawportals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawPortals(checked); });
     connect(drawleak, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeak(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
@@ -281,6 +305,8 @@ void MainWindow::createPropertiesSidebar()
     connect(draw_opaque, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
+    connect(show_bmodels, &QAbstractButton::toggled, this,
+        [=](bool checked) { glView->setShowBmodels(checked); });
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();
@@ -404,7 +430,7 @@ void MainWindow::setupMenu()
 
     menu->addSeparator();
 
-    auto *takeScreenshot = menu->addAction(tr("Save Screenshot..."), this, &MainWindow::takeScreenshot);
+    menu->addAction(tr("Save Screenshot..."), this, &MainWindow::takeScreenshot);
 
     menu->addSeparator();
 
@@ -864,7 +890,7 @@ void MainWindow::displayCameraPositionInfo()
         return;
 
     const qvec3f point = glView->cameraPosition();
-    const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+    [[maybe_unused]] const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
 
     // TODO: display leaf info
 }

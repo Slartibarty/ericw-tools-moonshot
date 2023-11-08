@@ -494,38 +494,10 @@ static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t 
     }
 
     const int key = (bsp->loadversion->game->id == GAME_QUAKE_II) ? leaf->cluster : leaf->visofs;
-    if (auto it = UncompressedVis().find(leaf->cluster); it != UncompressedVis().end()) {
+    if (auto it = UncompressedVis().find(key); it != UncompressedVis().end()) {
         return &it->second;
     }
     return nullptr;
-}
-
-// returns true if pvs can see leaf
-static bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        if (leaf->cluster < 0) {
-            return false;
-        }
-
-        if (leaf->cluster >= bsp->dvis.bit_offsets.size() ||
-            bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster) >= bsp->dvis.bits.size()) {
-            logging::print("Pvs_LeafVisible: invalid visofs for cluster {}\n", leaf->cluster);
-            return false;
-        }
-
-        return !!(pvs[leaf->cluster >> 3] & (1 << (leaf->cluster & 7)));
-    } else {
-        const int leafnum = (leaf - bsp->dleafs.data());
-        const int visleaf = leafnum - 1;
-
-        if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs) {
-            logging::print("WARNING: bad/empty vis data on leaf?");
-            return false;
-        }
-
-        return !!(pvs[visleaf >> 3] & (1 << (visleaf & 7)));
-    }
 }
 
 static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
@@ -1766,7 +1738,6 @@ static void LightFace_LocalMin(
 
 static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
     if (!modelinfo)
@@ -3305,7 +3276,6 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
-        const char *texname = Face_TextureName(bsp, face);
         Q_assert(Face_IsLightmapped(bsp, face));
     }
 
