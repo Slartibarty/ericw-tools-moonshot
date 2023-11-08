@@ -138,4 +138,15 @@ struct bspx_decoupled_lm_perface
     void stream_read(std::istream &s);
 };
 
+// MOONSHOT BSPX lump
+enum bspx_moonshot_flags_t
+{
+	BSPX_MOONSHOT_HDR	= 1<<0,		// lightdata is e5bgr9
+};
+
+struct bspx_moonshot_t
+{
+	uint32_t flags;
+};
+
 // BSPX data

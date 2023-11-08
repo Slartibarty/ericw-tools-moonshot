@@ -83,6 +83,26 @@ struct texture
     qvec3f averageColor{0};
 };
 
+struct texture_float32
+{
+    texture_meta meta{};
+
+    // in the case of replacement textures, these may not
+    // the width/height of the metadata.
+    uint32_t width = 0, height = 0;
+
+    // RGBA order
+    std::vector<qvec4f> pixels;
+
+    // the scale required to map a pixel from the
+    // meta data onto the real size (16x16 onto 32x32 -> 2)
+    float width_scale = 1, height_scale = 1;
+
+    // This member is only set before insertion into the table
+    // and not calculated by individual load functions.
+    qvec3f averageColor{0};
+};
+
 extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
 
 // clears the texture cache

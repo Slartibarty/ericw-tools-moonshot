@@ -2421,6 +2421,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
             /* Fix any negative values */
             color = qv::max(color, {0});
 
+#if 0
             // before any other scaling, apply maxlight
             if (lightsurf->maxlight || cfg.maxlight.value()) {
                 vec_t maxcolor = qv::max(color);
@@ -2461,6 +2462,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
             if (maxcolor > 255.0) {
                 color *= (255.0 / maxcolor);
             }
+#endif
         }
     }
 }
@@ -2892,6 +2894,37 @@ bool Face_IsEmissive(const mbsp_t *bsp, const mface_t *face)
     return bsp->loadversion->game->surf_is_emissive(texinfo->flags, texname);
 }
 
+static unsigned int HDR_PackResult(qvec4f rgba)
+{
+#define HDR_ONE 255.0f //logical value for 1.0 lighting (quake's overbrights give 255).
+    //we want 0-1-like values. except that we can oversample and express smaller values too.
+    float r = rgba[0]/HDR_ONE;
+    float g = rgba[1]/HDR_ONE;
+    float b = rgba[2]/HDR_ONE;
+
+    int e = 0;
+    float m = std::max(std::max(r, g), b);
+    float scale;
+
+    if (m >= 0.5f)
+    {   //positive exponent
+       while (m >= (1<<(e)) && e < 30-15)  //don't do nans.
+           e++;
+    }
+    else
+    {   //negative exponent...
+       while (m < 1/(1<<-e) && e > -15)    //don't do nans.
+           e--;
+    }
+
+    scale = pow(2, e-9);
+
+    return ((e+15)<<27) |
+       (std::min((int)(r/scale + 0.5f), 0x1ff)<<18) |
+       (std::min((int)(g/scale + 0.5f), 0x1ff)<<9) |
+       (std::min((int)(b/scale + 0.5f), 0x1ff)<<0);
+}
+
 /**
  * - Writes (actual_width * actual_height) bytes to `out`
  * - Writes (actual_width * actual_height * 3) bytes to `lit`
@@ -2943,9 +2976,15 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
                 const qvec4f &color = output_color.at(sampleindex);
 
                 if (lit) {
+#if 1
+                    uint32_t *hdr = (uint32_t *)lit;
+                    *hdr++ = HDR_PackResult(color);
+                    lit = (uint8_t *)hdr;
+#else
                     *lit++ = color[0];
                     *lit++ = color[1];
                     *lit++ = color[2];
+#endif
                 }
 
                 if (out) {
@@ -3035,9 +3074,15 @@ static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *
 
             if (lit || out) {
                 if (lit) {
+#if 1
+                    uint32_t *hdr = (uint32_t *)lit;
+                    *hdr++ = HDR_PackResult(color);
+                    lit = (uint8_t *)hdr;
+#else
                     *lit++ = color[0];
                     *lit++ = color[1];
                     *lit++ = color[2];
+#endif
                 }
 
                 if (out) {
@@ -3101,7 +3146,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
                 out += size;
             }
             if (lit) {
-                lit += (size * 3);
+                lit += (size * 4); // SlartHDR: Was (* 3)
             }
             if (lux) {
                 lux += (size * 3);
@@ -3273,7 +3318,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             out += size;
         }
         if (lit) {
-            lit += (size * 3);
+            lit += (size * 4); // SlartHDR: Was (* 3)
         }
         if (lux) {
             lux += (size * 3);
@@ -3303,7 +3348,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
                 out += lightsurf->vanilla_extents.numsamples();
             }
             if (lit) {
-                lit += (lightsurf->vanilla_extents.numsamples() * 3);
+                lit += (lightsurf->vanilla_extents.numsamples() * 4); // SlartHDR: Was (* 3)
             }
             if (lux) {
                 lux += (lightsurf->vanilla_extents.numsamples() * 3);

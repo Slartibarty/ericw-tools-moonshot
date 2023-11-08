@@ -1001,14 +1001,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
         lightmap_texture->setSize(lm_tex.width, lm_tex.height);
         lightmap_texture->setLayers(highest_depth + 1);
-        lightmap_texture->setFormat(getDefaultTextureFormat());
+        lightmap_texture->setFormat(QOpenGLTexture::RGBA32F);
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->allocateStorage();
 
         for (auto &style : lightmap.style_to_lightmap_atlas) {
-            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::Float32,
                 reinterpret_cast<const void *>(style.second.pixels.data()));
         }
     }

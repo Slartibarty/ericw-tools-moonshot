@@ -38,7 +38,7 @@ struct full_atlas_t
      */
     std::map<int, std::vector<qvec2f>> facenum_to_lightmap_uvs;
 
-    std::map<int, img::texture> style_to_lightmap_atlas;
+    std::map<int, img::texture_float32> style_to_lightmap_atlas;
 };
 
 full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata, bool use_bspx, bool use_decoupled);

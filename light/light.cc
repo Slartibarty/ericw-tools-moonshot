@@ -572,7 +572,7 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
         file_p += size;
     }
     if (!lit_filebase.empty()) {
-        lit_file_p += 3 * size;
+        lit_file_p += 4 * size; // SlartHDR: Was (* 3)
     }
     if (!lux_filebase.empty()) {
         lux_file_p += 3 * size;
@@ -602,7 +602,7 @@ void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, 
     }
 
     if (colordata && !lit_filebase.empty()) {
-        *colordata = lit_filebase.data() + (lightofs * 3);
+        *colordata = lit_filebase.data() + (lightofs * 4); // SlartHDR: Was (* 3)
     }
 
     if (deluxdata && !lux_filebase.empty()) {
@@ -1692,6 +1692,18 @@ int light_main(int argc, const char **argv)
         if (light_options.write_luxfile & lightfile::bspx) {
             lux_filebase.resize(bsp.dlightdata.size() * 3);
             bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase);
+        }
+
+        // Write the Moonshot info lump
+        bspdata.bspx.entries.erase("MOONSHOT");
+
+        if (bsp.loadversion->game->subid == SUBGAME_MOONSHOT) {
+            std::vector<uint8_t> moonshotVec(sizeof(bspx_moonshot_t));
+
+            bspx_moonshot_t *moonshot = (bspx_moonshot_t *)moonshotVec.data();
+            moonshot->flags = BSPX_MOONSHOT_HDR;
+
+            bspdata.bspx.transfer("MOONSHOT", moonshotVec);
         }
     }
 

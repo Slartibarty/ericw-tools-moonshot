@@ -35,6 +35,16 @@
 #define STBI_WRITE_NO_STDIO
 #include "../3rdparty/stb_image_write.h"
 
+// Slart: This table is from FTEQW
+//for soft-decoding e5bgr9's exponent. multiply by the per-channel mantissa for a 0-1 result.
+static const float rgb9e5tab[32] = {
+	//aka: pow(2, biasedexponent - bias-bits) where bias is 15 and bits is 9
+	1.0/(1<<24),	1.0/(1<<23),	1.0/(1<<22),	1.0/(1<<21),	1.0/(1<<20),	1.0/(1<<19),	1.0/(1<<18),	1.0/(1<<17),
+	1.0/(1<<16),	1.0/(1<<15),	1.0/(1<<14),	1.0/(1<<13),	1.0/(1<<12),	1.0/(1<<11),	1.0/(1<<10),	1.0/(1<<9),
+	1.0/(1<<8),		1.0/(1<<7),		1.0/(1<<6),		1.0/(1<<5),		1.0/(1<<4),		1.0/(1<<3),		1.0/(1<<2),		1.0/(1<<1),
+	1.0,			1.0*(1<<1),		1.0*(1<<2),		1.0*(1<<3),		1.0*(1<<4),		1.0*(1<<5),		1.0*(1<<6),		1.0*(1<<7),
+};
+
 static std::string hex_string(const uint8_t *bytes, const size_t count)
 {
     std::string str;
@@ -298,6 +308,16 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         use_decoupled = false;
     }
 
+    // check for hdrness
+    bool is_e5bgr9 = false;
+    {
+        auto &moonshotData = bspx.at("MOONSHOT");
+        const bspx_moonshot_t *moonshotLump = reinterpret_cast<const bspx_moonshot_t *>(moonshotData.data());
+        if (moonshotLump->flags & BSPX_MOONSHOT_HDR) {
+            is_e5bgr9 = true;
+        }
+    }
+
     // make rectangles
     for (auto &face : bsp.dfaces) {
         const ptrdiff_t face_idx = (&face - bsp.dfaces.data());
@@ -363,7 +383,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     }
 
     // calculate final atlas texture size
-    img::texture full_atlas;
+    img::texture_float32 full_atlas;
     size_t sqrt_count = ceil(sqrt(atlasses.size()));
     size_t trimmed_width = 0, trimmed_height = 0;
 
@@ -394,6 +414,15 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     full_atlas.height = full_atlas.meta.height = trimmed_height;
     full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
 
+    int lm_offset, lm_stride;
+    if (is_e5bgr9) {
+        lm_offset = is_lit ? 4 : 1;
+        lm_stride = 4;
+    } else {
+        lm_offset = is_lit ? 3 : 1;
+        lm_stride = is_rgb ? 3 : 1;
+    }
+
     full_atlas_t result;
 
     // compile all of the styles that are available
@@ -419,8 +448,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
                 continue;
             }
 
-            auto in_pixel =
-                lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
+            const uint8_t *in_pixel =
+                lightdata_source + (lm_offset * rect.lightofs) + (rect.extents.numsamples() * lm_stride * style_index);
 
             for (size_t y = 0; y < rect.extents.height(); y++) {
                 for (size_t x = 0; x < rect.extents.width(); x++) {
@@ -430,12 +459,23 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
                     auto &out_pixel = full_atlas.pixels[(oy * full_atlas.width) + ox];
                     out_pixel[3] = 255;
 
-                    if (is_rgb) {
-                        out_pixel[0] = *in_pixel++;
-                        out_pixel[1] = *in_pixel++;
-                        out_pixel[2] = *in_pixel++;
+                    if (is_e5bgr9) {
+                        uint32_t l = *(uint32_t *)in_pixel;
+		                float e = rgb9e5tab[l>>27];
+
+                        out_pixel[0] += (e * ((l>>18)&0x1ff));
+                        out_pixel[1] += (e * ((l>>9)&0x1ff));
+                        out_pixel[2] += (e * ((l>>0)&0x1ff));
+
+                        in_pixel += 4;
                     } else {
-                        out_pixel[0] = out_pixel[1] = out_pixel[2] = *in_pixel++;
+                        if (is_rgb) {
+                            out_pixel[0] = *in_pixel++;
+                            out_pixel[1] = *in_pixel++;
+                            out_pixel[2] = *in_pixel++;
+                        } else {
+                            out_pixel[0] = out_pixel[1] = out_pixel[2] = *in_pixel++;
+                        }
                     }
                 }
             }
