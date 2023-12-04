@@ -1947,6 +1947,29 @@ const bspversion_t bspver_moonshot_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "moonshot
         {"areaportals", sizeof(dareaportal_t)},
     },
     &gamedef_moonshot};
+const bspversion_t bspver_moonshot2{MOONSHOT_BSPIDENT, MOONSHOT_BSPVERSION, "moonshot2", "Moonshot Quake II BSP Version 2",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_t)},
+        {"texinfos", sizeof(q2_texinfo_t)},
+        {"faces", sizeof(moonshot_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_t)},
+        {"leaffaces", sizeof(uint16_t)},
+        {"leafbrushes", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(q2_dbrushside_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+    },
+    &gamedef_moonshot};
 
 static auto as_tuple(const surfflags_t &flags)
 {
@@ -2307,6 +2330,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             ConvertQ2BSPToGeneric(std::get<q2bsp_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
             ConvertQ2BSPToGeneric(std::get<q2bsp_qbism_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<moonshot_bsp_t>(bspdata->bsp)) {
+            ConvertQ2BSPToGeneric(std::get<moonshot_bsp_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
             ConvertQ1BSPToGeneric(std::get<bsp2rmq_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
@@ -2331,6 +2356,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_qbism || to_version == &bspver_moonshot_qbism) {
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version);
+            } else if (to_version == &bspver_moonshot2) {
+                bspdata->bsp = ConvertGenericToQ2BSP<moonshot_bsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
                 bspdata->bsp = ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
@@ -2612,7 +2639,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
     stream >= temp_version.ident;
     stream.seekg(0);
 
-    if (temp_version.ident == Q2_BSPIDENT || temp_version.ident == Q2_QBISMIDENT) {
+    if (temp_version.ident == Q2_BSPIDENT || temp_version.ident == Q2_QBISMIDENT || temp_version.ident == MOONSHOT_BSPIDENT) {
         q2_dheader_t q2header;
         stream >= q2header;
 
@@ -2659,6 +2686,8 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         ReadQ2BSP(reader, bspdata->bsp.emplace<q2bsp_t>());
     } else if (bspdata->version == &bspver_qbism || bspdata->version == &bspver_moonshot_qbism) {
         ReadQ2BSP(reader, bspdata->bsp.emplace<q2bsp_qbism_t>());
+    } else if (bspdata->version == &bspver_moonshot2) {
+        ReadQ2BSP(reader, bspdata->bsp.emplace<moonshot_bsp_t>());
     } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
         ReadQ1BSP(reader, bspdata->bsp.emplace<bsp29_t>());
     } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
@@ -3031,6 +3060,8 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintQ2BSPLumps(lumpspec, std::get<q2bsp_t>(bspdata->bsp));
     } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
         PrintQ2BSPLumps(lumpspec, std::get<q2bsp_qbism_t>(bspdata->bsp));
+    } else if (std::holds_alternative<moonshot_bsp_t>(bspdata->bsp)) {
+        PrintQ2BSPLumps(lumpspec, std::get<moonshot_bsp_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
         PrintQ1BSPLumps(lumpspec, std::get<bsp29_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {

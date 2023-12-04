@@ -29,6 +29,7 @@
 #include <string_view>
 #include <memory>
 #include "qvec.hh"
+#include "bitflags.hh"
 
 constexpr int32_t MBSPIDENT = -1;
 
@@ -235,6 +236,13 @@ struct mtexinfo_t
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
 };
 
+// dface_t flags, replaces "sides"
+enum moonshot_face_flags_t : uint32_t
+{
+    FACE_FLAGS_PLANEBACK = nth_bit(0), // == old "side" member
+    FACE_FLAGS_ON_NODE = nth_bit(1), // 1 if on node, 0 if in leaf
+};
+
 constexpr size_t MAXLIGHTMAPS = 4;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
 
@@ -249,6 +257,11 @@ struct mface_t
     /* lighting info */
     std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
+
+    uint32_t flags; // Moonshot flags
+
+    // returns true if the face is on the back side of the plane
+    bool has_flipped_plane() const { return side || flags & FACE_FLAGS_PLANEBACK; }
 
     // serialize for streams
     void stream_write(std::ostream &s) const;

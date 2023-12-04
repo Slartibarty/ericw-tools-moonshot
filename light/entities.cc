@@ -1303,7 +1303,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
     qplane3d plane = bsp->dplanes[face->planenum];
 
     /* Nudge 2 units (by default) along face normal */
-    if (face->side) {
+    if (face->has_flipped_plane()) {
         plane = -plane;
     }
 

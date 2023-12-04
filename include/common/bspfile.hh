@@ -425,6 +425,7 @@ using hull_index_t = std::optional<uint8_t>;
 #include "bspfile_generic.hh"
 #include "bspfile_q1.hh"
 #include "bspfile_q2.hh"
+#include "bspfile_moonshot.hh"
 #include "bspxfile.hh"
 
 using bspxentries_t = std::unordered_map<std::string, std::vector<uint8_t>>;
@@ -437,7 +438,7 @@ struct bspdata_t
     fs::path file;
 
     // Stay in monostate until a BSP type is requested.
-    std::variant<std::monostate, mbsp_t, bsp29_t, bsp2rmq_t, bsp2_t, q2bsp_t, q2bsp_qbism_t> bsp;
+    std::variant<std::monostate, mbsp_t, bsp29_t, bsp2rmq_t, bsp2_t, q2bsp_t, q2bsp_qbism_t, moonshot_bsp_t> bsp;
 
     // This can be used with any BSP format.
     struct bspxentries
@@ -456,7 +457,8 @@ struct bspdata_t
 
 /* table of supported versions */
 constexpr const bspversion_t *const bspversions[] = {&bspver_generic, &bspver_q1, &bspver_h2, &bspver_h2bsp2,
-    &bspver_h2bsp2rmq, &bspver_bsp2, &bspver_bsp2rmq, &bspver_hl, &bspver_q2, &bspver_qbism, &bspver_moonshot, &bspver_moonshot_qbism};
+    &bspver_h2bsp2rmq, &bspver_bsp2, &bspver_bsp2rmq, &bspver_hl, &bspver_q2, &bspver_qbism,
+    &bspver_moonshot, &bspver_moonshot_qbism, &bspver_moonshot2};
 
 void LoadBSPFile(fs::path &filename, bspdata_t *bspdata); // returns the filename as contained inside a bsp
 void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata);

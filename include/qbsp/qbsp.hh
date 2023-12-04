@@ -172,6 +172,7 @@ public:
     setting_bool bsp2rmq;
     setting_bool moonshot;
     setting_bool moonshotqbism;
+    setting_bool moonshot2;
     setting_func nosubdivide;
     setting_invertible_bool software;
     setting_int32 subdivide;

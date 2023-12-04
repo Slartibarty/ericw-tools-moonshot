@@ -301,7 +301,7 @@ const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const
                 continue;
             }
 
-            const bool sameplane = (neighbour->planenum == f->planenum && neighbour->side == f->side);
+            const bool sameplane = (neighbour->planenum == f->planenum && neighbour->has_flipped_plane() == f->has_flipped_plane());
 
             // Check if these faces are smoothed or on the same plane
             if (!(FacesSmoothed(f, neighbour) || sameplane)) {

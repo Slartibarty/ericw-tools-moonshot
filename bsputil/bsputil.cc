@@ -125,7 +125,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
         const mface_t *face = BSP_GetFace(bsp, i);
         dplane_t plane = bsp->dplanes[face->planenum];
 
-        if (face->side) {
+        if (face->has_flipped_plane()) {
             plane = -plane;
         }
 

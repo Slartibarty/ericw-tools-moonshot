@@ -130,7 +130,7 @@ qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
     Q_assert(f->planenum >= 0 && f->planenum < bsp->dplanes.size());
     qplane3d result = bsp->dplanes[f->planenum];
 
-    if (f->side) {
+    if (f->has_flipped_plane()) {
         return -result;
     }
 

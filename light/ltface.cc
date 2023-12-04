@@ -669,7 +669,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
 
         /* Set up the plane, not including model offset */
         qplane3d &plane = lightsurf->plane;
-        if (face->side) {
+        if (face->has_flipped_plane()) {
             plane = -bsp->dplanes[face->planenum];
         } else {
             plane = bsp->dplanes[face->planenum];

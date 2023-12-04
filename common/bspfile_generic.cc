@@ -257,11 +257,11 @@ void bsp2_dnode_t::stream_read(std::istream &s)
 
 void mface_t::stream_write(std::ostream &s) const
 {
-    s <= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
+    s <= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs, flags);
 }
 void mface_t::stream_read(std::istream &s)
 {
-    s >= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
+    s >= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs, flags);
 }
 
 // bsp2_dclipnode_t

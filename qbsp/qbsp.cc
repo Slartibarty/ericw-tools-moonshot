@@ -457,6 +457,7 @@ qbsp_settings::qbsp_settings()
       bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
       moonshot{this, "moonshot", false, &game_target_group, "target Moonshot with the default Quake II BSP format"},
       moonshotqbism{this, "moonshotqbism", false, &game_target_group, "target Moonshot with Qbism's extended Quake II BSP format"},
+      moonshot2{this, "moonshot2", false, &game_target_group, "target Moonshot's new modified q2bsp format"},
       nosubdivide{this, "nosubdivide", [&](source src) { subdivide.set_value(0, src); }, &common_format_group,
           "disable subdivision"},
       software{this, "software", true, &common_format_group,
@@ -683,6 +684,10 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     if (moonshotqbism.value()) {
         set_target_version(&bspver_moonshot_qbism);
+    }
+
+    if (moonshot2.value()) {
+        set_target_version(&bspver_moonshot2);
     }
 
     if (hlbsp.value()) {
