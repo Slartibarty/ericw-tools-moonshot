@@ -2,6 +2,7 @@ add_library(common STATIC
     bspinfo.cc
     bspfile.cc
     bspfile_generic.cc
+    bspfile_moonshot.cc
     bspfile_q1.cc
     bspfile_q2.cc
     bsputils.cc
@@ -26,6 +27,7 @@ add_library(common STATIC
     ../include/common/bspinfo.hh
     ../include/common/bspfile.hh
     ../include/common/bspfile_generic.hh
+    ../include/common/bspfile_moonshot.hh
     ../include/common/bspfile_q1.hh
     ../include/common/bspfile_q2.hh
     ../include/common/bsputils.hh
